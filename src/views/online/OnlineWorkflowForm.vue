@@ -7,6 +7,7 @@ import { showToast } from 'vant'
 import { computed, provide, ref, watch } from 'vue'
 import { FlowOperationController } from '@/api/FlowController/FlowOperationController'
 import { OnlineFormEventType, SysOnlineRelationType } from '@/staticDict/index'
+import OnlineCustomBlock from '@/views/components/Online/OnlineCustomBlock.vue'
 import OnlineEditForm from './OnlineEditForm.vue'
 import { useOnlineForm } from './useOnlineForm'
 
@@ -404,20 +405,7 @@ defineExpose({
       ref="formRef"
       :model="formData"
     >
-      <!-- TODO: 需要实现 OnlineCustomBlock 组件 -->
-      <!-- <OnlineCustomBlock v-if="isReady" :widgetList="form.widgetList" /> -->
-      <van-cell-group v-if="isReady" inset>
-        <van-field
-          v-for="widget in visibleWidgetList"
-          :key="widget.variableName"
-          v-model="formData[widget.propString]"
-          :label="widget.showName"
-          :required="widget.props.required"
-          :rules="rules[widget.propString] || []"
-          :placeholder="`请输入${widget.showName}`"
-          :disabled="isWidgetDisabled(widget)"
-        />
-      </van-cell-group>
+      <OnlineCustomBlock v-if="isReady" :widget-list="form.widgetList" />
     </van-form>
 
     <!-- 子表单弹窗 -->

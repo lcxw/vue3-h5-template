@@ -48,11 +48,12 @@ function onReset() {
 
 <template>
   <van-popup
-    v-model:show="showPickerDlg"
+    :show="showPickerDlg"
     position="bottom"
     round
     closeable
     :style="{ height: '60%' }"
+    @update:show="(val: boolean) => val || onCancel()"
   >
     <div class="custom-popup">
       <!-- 标题栏 -->

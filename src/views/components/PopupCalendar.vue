@@ -36,6 +36,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   (e: 'update:value', value: string[]): void
+  (e: 'update:show', value: boolean): void
   (e: 'close'): void
 }>()
 
@@ -124,11 +125,12 @@ watch(
 <template>
   <div class="popup-calendar">
     <van-calendar
-      v-model:show="show"
+      :show="show"
       :title="label"
       :type="calendarType"
       :color="color"
       :max-date="maxDate"
+      @update:show="(val: boolean) => emit('update:show', val)"
       @confirm="onSelectDate"
       @close="onClose"
     />
