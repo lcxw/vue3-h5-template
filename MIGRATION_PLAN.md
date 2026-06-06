@@ -28,7 +28,6 @@
 - **组合式函数**: composables (useFlow.ts替代flowMixins)
 - **语言**: TypeScript
 
-
 ---
 
 ## 三、执行任务清单
@@ -36,10 +35,8 @@
 ### Task 1: 核心基础设施检查
 **目标**: 确保项目基础架构正确运行
 
-- [ ] 1.1 检查 `src/utils/taroCompat.ts` 兼容性层实现
-  - 验证所有uni API到Taro API的映射
+  - 验证所有uni API到Axios API的映射
   - 重点检查: navigateTo, showToast, showModal, navigateBack, getStorageSync/setStorageSync
-  - 文件: `src/utils/taroCompat.ts`
 
 - [ ] 1.2 检查 `src/common/request.ts` 和 `src/common/ajax.ts`
   - 对比原始项目的请求封装
@@ -78,7 +75,7 @@
   - 检查用户信息存储和获取
   - 验证路由守卫 (未登录跳转)
 
-**验证方法**: 
+**验证方法**:
 1. 启动开发服务器
 2. 访问登录页，输入用户名密码
 3. 验证能成功登录并跳转到首页
@@ -383,10 +380,9 @@
 ## 四、关键风险点和注意事项
 
 ### 高风险项
-1. **uni API → Taro API 兼容层**: 这是整个迁移的基础，如有问题会导致所有功能异常
-2. **onlineFormMixins.ts**: 876行的复杂逻辑，迁移过程中容易遗漏或出错
-3. **useFlow.ts**: 流程核心逻辑，替代了flowMixins，需确保所有方法正确实现
-4. **表单动态渲染**: 在线表单的核心，组件类型多、逻辑复杂
+1. **onlineFormMixins.ts**: 876行的复杂逻辑，迁移过程中容易遗漏或出错
+2. **useFlow.ts**: 流程核心逻辑，替代了flowMixins，需确保所有方法正确实现
+3. **表单动态渲染**: 在线表单的核心，组件类型多、逻辑复杂
 
 ### 中风险项
 5. **组件库替换**: uview → vant，部分组件API可能不一致
@@ -472,7 +468,6 @@ npm run dev
 ### 核心文件
 - 入口: `src/App.vue`, `src/app.ts`
 - 路由: `src/router/index.ts`
-- 兼容性层: `src/utils/taroCompat.ts`
 - 请求封装: `src/common/request.ts`, `src/common/ajax.ts`
 
 ### 在线表单核心

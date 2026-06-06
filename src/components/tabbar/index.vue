@@ -1,30 +1,45 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 
-const active = ref(0)
-const tabbarData = reactive([
+/**
+ * TabBar 组件
+ * 底部导航栏，包含消息、工作台、我的三个Tab
+ */
+
+// 当前路由
+const route = useRoute()
+
+// 当前激活的Tab索引
+const active = computed(() => {
+  const path = route.path
+  if (path.includes('/message') || path.includes('/workflow'))
+    return 0
+  if (path.includes('/home'))
+    return 1
+  if (path.includes('/my'))
+    return 2
+  return 1 // 默认工作台
+})
+
+// TabBar 数据配置
+const tabbarData = [
   {
-    icon: 'wap-home-o',
-    title: '主页',
-    to: {
-      name: 'Demo',
-    },
+    icon: 'comment-o',
+    title: '消息',
+    to: { name: 'Message' },
   },
   {
-    icon: 'gem-o',
-    title: '工具',
-    to: {
-      name: 'Tools',
-    },
+    icon: 'wap-home-o',
+    title: '工作台',
+    to: { name: 'Home' },
   },
   {
     icon: 'user-o',
-    title: '关于',
-    to: {
-      name: 'About',
-    },
+    title: '我的',
+    to: { name: 'My' },
   },
-])
+]
 </script>
 
 <template>

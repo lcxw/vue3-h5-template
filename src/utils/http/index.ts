@@ -1,16 +1,18 @@
 import type { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 import Axios from 'axios'
-import { showFailToast } from 'vant'
-import { ContentTypeEnum, ResultEnum } from '@/enums/request-enum'
+import { closeToast, showFailToast, showLoadingToast } from 'vant'
+import router from '@/router'
+import { ContentTypeEnum } from '@/enums/request-enum'
 import NProgress from '../progress'
 import 'vant/es/toast/style'
 
-// 默认 axios 实例请求配置
+// 默认 Axios 实例请求配置
 const configDefault: AxiosRequestConfig = {
   headers: {
     'Content-Type': ContentTypeEnum.JSON,
+    'deviceType': '0',
   },
-  timeout: 0, // 按需设置请求超时时间
+  timeout: 30000,
   baseURL: import.meta.env.VITE_BASE_API,
   data: {},
 }
@@ -18,7 +20,7 @@ const configDefault: AxiosRequestConfig = {
 // HTTP 状态码 → 错误消息映射
 const HTTP_ERROR_MAP: Record<number, string> = {
   400: '请求错误',
-  401: '未授权，请登录',
+  401: '登录已过期，请重新登录',
   403: '拒绝访问',
   404: '请求地址出错',
   408: '请求超时',
@@ -27,19 +29,51 @@ const HTTP_ERROR_MAP: Record<number, string> = {
   502: '网关错误',
   503: '服务不可用',
   504: '网关超时',
-  505: 'HTTP版本不受支持',
+  505: 'HTTP版本不支持',
 }
 
 const axiosInstance: AxiosInstance = Axios.create(configDefault)
+
+// 是否正在跳转登录页（防止重复跳转）
+let isRedirectingToLogin = false
+
+/**
+ * 处理 401 认证过期
+ */
+function handleAuthExpired(): void {
+  if (isRedirectingToLogin) return
+  isRedirectingToLogin = true
+  // 清空本地存储
+  try {
+    localStorage.clear()
+    sessionStorage.clear()
+  }
+  catch { /* ignore */ }
+  showFailToast('登录已过期，请重新登录')
+  setTimeout(() => {
+    isRedirectingToLogin = false
+    router.push('/login')
+  }, 1500)
+}
 
 // 请求拦截
 axiosInstance.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     NProgress.start()
-    // 发送请求前，可在此携带 token
-    // if (token) {
-    //   config.headers['token'] = token
-    // }
+    // 注入 token
+    const token = localStorage.getItem('token')
+    if (token) {
+      config.headers.Authorization = token
+    }
+    // 注入 MenuId
+    try {
+      const menuIdStr = localStorage.getItem('currentMenuId')
+      if (menuIdStr) {
+        const parsed = JSON.parse(menuIdStr)
+        config.headers.MenuId = parsed?.data ?? menuIdStr
+      }
+    }
+    catch { /* ignore */ }
     return config
   },
   (error: AxiosError) => {
@@ -52,20 +86,23 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
   (response: AxiosResponse) => {
     NProgress.done()
-    // 与后端协定的返回字段
-    const { code, result } = response.data
-    // 判断请求是否成功
-    const isSuccess
-      = result
-        && Reflect.has(response.data, 'code')
-        && code === ResultEnum.SUCCESS
-    if (isSuccess) {
-      return result
+    const res = response.data
+    if (!res) {
+      showFailToast('网络请求错误')
+      return Promise.reject(new Error('网络请求错误'))
     }
-    else {
-      // 处理请求错误
-      return Promise.reject(response.data)
+    // 后端返回格式: { success: boolean, data: any, errorMessage?: string, errorCode?: number, code?: number }
+    if (res.success) {
+      return res.data === undefined ? {} : res.data
     }
+    // 401 处理
+    if (res.errorCode === 401 || res.code === 401) {
+      handleAuthExpired()
+      return Promise.reject(new Error(res.errorMessage || '登录已过期'))
+    }
+    // 业务错误
+    showFailToast(res.errorMessage || '网络请求错误')
+    return Promise.reject(res)
   },
   (error: AxiosError) => {
     NProgress.done()
@@ -75,6 +112,10 @@ axiosInstance.interceptors.response.use(
     }
     // 处理 HTTP 网络错误
     const status = error.response?.status
+    if (status === 401) {
+      handleAuthExpired()
+      return Promise.reject(error)
+    }
     const message = (status && HTTP_ERROR_MAP[status]) || '网络连接故障'
     showFailToast(message)
     return Promise.reject(error)
@@ -98,11 +139,30 @@ export const http = {
     return axiosInstance.request(config)
   },
   /**
+   * 文件上传
+   */
+  upload<T = any>(url: string, formData: FormData, config?: AxiosRequestConfig): Promise<T> {
+    return axiosInstance.post(url, formData, {
+      ...config,
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+  /**
+   * 文件下载 (返回 Blob)
+   */
+  downloadBlob(url: string, data?: any, config?: AxiosRequestConfig): Promise<Blob> {
+    return axiosInstance.post(url, data, {
+      ...config,
+      responseType: 'blob',
+    }).then((res: any) => {
+      if (res instanceof Blob && res.size > 0) {
+        return res
+      }
+      throw new Error('下载文件失败')
+    })
+  },
+  /**
    * 可取消的请求 — 适用于页面切换时取消未完成的请求
-   * @example
-   * const { promise, cancel } = http.requestWithCancel({ url: '/api/data' })
-   * onBeforeUnmount(() => cancel())
-   * const data = await promise
    */
   requestWithCancel<T = any>(config: AxiosRequestConfig) {
     const controller = new AbortController()
@@ -116,3 +176,5 @@ export const http = {
     }
   },
 }
+
+export { showLoadingToast, closeToast }

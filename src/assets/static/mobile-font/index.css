@@ -1,0 +1,94 @@
+@font-face {
+  font-family: "mobileIconFont"; /* Project id 4225209 */
+  src: url('./static/mobile-font/iconfont.woff2') format('woff2'),
+    url('./static/mobile-font/iconfont.woff') format('woff'),
+    url('./static/mobile-font/iconfont.ttf') format('truetype'),
+    url('./static/mobile-font/iconfont.svg') format('svg');
+}
+
+@font-face {
+    font-family: "YouSheBiaoTiHei";
+    src: url(./static/mobile-font/YouSheBiaoTiHei.ttf);
+    font-weight: normal;
+    font-style: normal;
+}
+
+.mobile-font {
+  font-family: "mobileIconFont" !important;
+  font-size: 16px;
+  font-style: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 搜索 */
+.icon-search:before {
+  content: "\e680";
+}
+
+/* 上传 */
+.icon-upload:before {
+  content: "\e67f";
+}
+
+/* 筛选 */
+.icon-filter:before {
+  content: "\e670";
+}
+/* 我的 */
+.icon-me:before {
+  content: "\e671";
+}
+/* 消息 */
+.icon-message:before {
+  content: "\e672";
+}
+/* 关闭 */
+.icon-close:before {
+  content: "\e681";
+}
+/* 移除 */
+.icon-remove:before {
+  content: "\e674";
+}
+/* 工作台 */
+.icon-home:before {
+  content: "\e675";
+}
+/* 通讯录 */
+.icon-tongxunlu:before {
+  content: "\e676";
+}
+/* 显示密码 */
+.icon-view:before {
+  content: "\e677";
+}
+/* 成功 */
+.icon-success:before {
+  content: "\e678";
+}
+/* 添加 */
+.icon-add:before {
+  content: "\e679";
+}
+/* 降序 */
+.icon-desc:before {
+  content: "\e67a";
+}
+/* 编辑 */
+.icon-edit:before {
+  content: "\e67b";
+}
+/* 删除 */
+.icon-delete:before {
+  content: "\e67c";
+}
+/* 隐藏密码 */
+.icon-hide:before {
+  content: "\e67d";
+}
+/* 升序 */
+.icon-asc:before {
+  content: "\e67e";
+}
+

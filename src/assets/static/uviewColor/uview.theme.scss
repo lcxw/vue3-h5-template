@@ -1,0 +1,43 @@
+// 此自定义uView主题生成于2023-11-20 15:35
+// 地址：http://www.uviewui.com/guide/theme.html
+
+:root {
+  --primary_color: #0080ff;
+  --success_color: #19be6b;
+  --warning_color: #ff9900;
+  --error_color: #fa3534;
+}
+
+$u-type-primary: #0080ff;
+$u-type-error: #fa3534;
+$u-type-warning: #ff9900;
+$u-type-success: #19be6b;
+$u-type-info: #909399;
+$u-type-primary-light: #ecf5ff;
+$u-type-error-light: #fef0f0;
+$u-type-warning-light: #fdf6ec;
+$u-type-success-light: #dbf1e1;
+$u-type-info-light: #f4f4f5;
+$u-type-primary-dark: transparentize($u-type-primary, 0.2);
+$u-type-error-dark: transparentize($u-type-error, 0.2);
+$u-type-warning-dark: transparentize($u-type-warning, 0.2);
+$u-type-success-dark: transparentize($u-type-success, 0.2);
+$u-type-info-dark: transparentize($u-type-info, 0.2);
+$u-type-primary-disabled: transparentize($u-type-primary, 0.85);
+$u-type-error-disabled: transparentize($u-type-error, 0.85);
+$u-type-warning-disabled: transparentize($u-type-warning, 0.85);
+$u-type-success-disabled: transparentize($u-type-success, 0.85);
+$u-type-info-disabled: transparentize($u-type-info, 0.85);
+$u-main-color: #303133;
+$u-content-color: #606266;
+$u-tips-color: #909399;
+$u-light-color: #c0c4cc;
+$u-border-color: #e4e7ed;
+$u-bg-color: #f3f4f6;
+$u-form-item-border-color: #dcdfe6;
+$u-form-item-height: 70 rpx;
+
+$uni-color-primary: $u-type-primary;
+$uni-color-success: $u-type-success;
+$uni-color-warning: $u-type-warning;
+$uni-color-error: $u-type-error;
