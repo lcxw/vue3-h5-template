@@ -233,6 +233,8 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
 
     // 字段
     if (Array.isArray(rawData.onlineColumnList)) {
+      // 重置 columnList 避免多次 rebuild 时累积
+      rawData.onlineTableList?.forEach((table: any) => { table.columnList = [] })
       rawData.onlineColumnList.forEach((column: any) => {
         if (column.dictId != null) {
           column.dictInfo = formConfig.dictMap!.get(column.dictId)
@@ -256,8 +258,6 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
         column.isRichText = column.fieldKind === SysOnlineFieldKind.RICH_TEXT
         const table = formConfig.tableMap!.get(column.tableId)
         if (table) {
-          if (!Array.isArray(table.columnList))
-            table.columnList = []
           table.columnList.push(column)
         }
         formConfig.columnMap!.set(column.columnId, column)
@@ -289,11 +289,11 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
 
     // 关联
     if (Array.isArray(rawData.onlineDatasourceRelationList)) {
+      // 重置 relationList 避免多次 rebuild 时累积
+      rawData.onlineDatasourceList?.forEach((ds: any) => { ds.relationList = [] })
       rawData.onlineDatasourceRelationList.forEach((relation: any) => {
         const datasource = formConfig.datasourceMap!.get(relation.datasourceId)
         if (datasource) {
-          if (!Array.isArray(datasource.relationList))
-            datasource.relationList = []
           datasource.relationList.push(relation)
         }
         relation.masterColumn = formConfig.columnMap!.get(relation.masterColumnId)
@@ -309,11 +309,11 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
 
     // 校验规则
     if (Array.isArray(rawData.onlineColumnRuleList)) {
+      // 重置 ruleList 避免多次 rebuild 时累积
+      rawData.onlineColumnList?.forEach((col: any) => { col.ruleList = [] })
       rawData.onlineColumnRuleList.forEach((rule: any) => {
         const column = formConfig.columnMap!.get(rule.columnId)
         if (column) {
-          if (!Array.isArray(column.ruleList) || column.ruleList.length === 0)
-            column.ruleList = []
           column.ruleList.push(rule)
         }
       })
