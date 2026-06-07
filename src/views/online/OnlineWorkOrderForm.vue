@@ -186,6 +186,10 @@ async function loadTableData(params: any): Promise<{ dataList: any[], totalCount
     if (params == null) {
       throw new Error('取消加载数据')
     }
+    if (processDefinitionKey.value == null) {
+      console.warn('loadTableData: processDefinitionKey 未就绪')
+      return { dataList: [], totalCount: 0 }
+    }
     const res = await FlowOperationController.listWorkOrder(params, {
       processDefinitionKey: processDefinitionKey.value,
     })
@@ -413,9 +417,12 @@ watch(() => props.formConfig, (newConfig) => {
         processDefinitionKey.value = res.processDefinitionKey
         processDefinitionName.value = res.processDefinitionName
         isReady.value = true
-        tableWidget.value.loadDataList(1)
+        nextTick(() => {
+          tableWidget.value.loadDataList(1)
+        })
       }).catch((e) => {
-        console.error(e)
+        console.error('viewDict 获取流程定义失败', e)
+        isReady.value = true
       })
     }
     else {
