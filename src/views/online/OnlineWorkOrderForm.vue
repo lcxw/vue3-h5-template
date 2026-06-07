@@ -186,7 +186,9 @@ async function loadTableData(params: any): Promise<{ dataList: any[], totalCount
     if (params == null) {
       throw new Error('取消加载数据')
     }
-    const res = await FlowOperationController.listWorkOrder(params)
+    const res = await FlowOperationController.listWorkOrder(params, {
+      processDefinitionKey: processDefinitionKey.value,
+    })
     res.dataList = res.dataList.map((item: any) => {
       const initTaskInfo = item.initTaskInfo == null ? {} : (typeof item.initTaskInfo === 'string' ? JSON.parse(item.initTaskInfo) : item.initTaskInfo)
       const runtimeTaskInfo = (Array.isArray(item.runtimeTaskInfoList) && item.runtimeTaskInfoList.length > 0) ? item.runtimeTaskInfoList[0] : {}
