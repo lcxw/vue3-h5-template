@@ -140,7 +140,7 @@ function deleteCoyForItem(type: string, data?: CopyItem): void {
     if (data != null) {
       selectData.value[type] = selectData.value[type].filter(item => item !== data)
     } else {
-      selectData.value[type] = []
+      delete selectData.value[type]
     }
   }
   onValueChange()
@@ -236,7 +236,7 @@ function loadSysRoleList(): void {
  */
 const copyForDataList = computed(() => {
   return Object.keys(selectData.value).map((key) => {
-    if (key != null && Array.isArray(selectData.value[key])) {
+    if (key != null && Array.isArray(selectData.value[key]) && selectData.value[key].length > 0) {
       return {
         type: key,
         dataList: selectData.value[key]

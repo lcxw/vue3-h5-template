@@ -195,6 +195,7 @@ function getButtonType(type: string): string {
   const refuseTypes = [
     SysFlowTaskOperationType.getById('refuse')?.id,
     SysFlowTaskOperationType.getById('multi_refuse')?.id,
+    SysFlowTaskOperationType.getById('parallel_refuse')?.id,
   ]
 
   const rejectTypes = [
@@ -462,7 +463,8 @@ async function getMasterData(operationType: string): Promise<Record<string, any>
   if (workflowFormRef.value && typeof workflowFormRef.value.getFormData === 'function') {
     try {
       const isDraft = taskDetailsData.value.isDraft || false
-      const formData = await workflowFormRef.value.getFormData(isDraft)
+      const variableList = taskDetailsData.value.variableList
+      const formData = await workflowFormRef.value.getFormData(isDraft, variableList)
       return formData
     }
     catch (e) {

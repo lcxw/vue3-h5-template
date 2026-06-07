@@ -43,33 +43,33 @@
 - **原始实现**: `this.queryTable.table`（通过组件 computed 访问）
 - **修复方案**: 将 queryTable 通过参数传入或使用 provide/inject
 - **文件**: `src/views/online/useOnlineForm.ts`
-- **状态**: [ ] 待修复
+- **状态**: [x] 已修复 (commit 87925de)
 
 ### Task 2.2: 修复 onCloseSubForm 未调用 operationCallback
 - **问题**: OnlineEditForm 和 OnlineWorkflowForm 的 onCloseSubForm 未调用 operationCallback，子表单操作结果无法回传
 - **修复方案**: 在 onCloseSubForm 中调用 operationCallback(data)
 - **文件**: `src/views/online/OnlineEditForm.vue`, `src/views/online/OnlineWorkflowForm.vue`
-- **状态**: [ ] 待修复
+- **状态**: [x] 已修复 (commit 87925de)
 
 ### Task 2.3: 修复 initWidgetRule 未调用 formRef.setRules
 - **问题**: 仅用 `Object.assign(rules, rulesObj)` 赋值，未调用 form ref 的 setRules，表单校验规则可能不生效
 - **原始实现**: `this.$refs.form.setRules(this.rules)` + setTimeout(200ms)
 - **修复方案**: 在 initWidgetRule 中获取 form ref 并调用 setRules
 - **文件**: `src/views/online/useOnlineForm.ts`
-- **状态**: [ ] 待修复
+- **状态**: [x] 已修复 (commit 87925de)
 
 ### Task 2.4: 补全 buildEventContext 缺失的方法
 - **问题**: `buildEventContext` 未提供 `doUrl`、`router` 等，自定义事件脚本可能报错
 - **原始实现**: 事件函数通过 `.bind(this)` 可访问完整 Vue 实例（含 doUrl、$refs、$router 等）
 - **修复方案**: 在 buildEventContext 中补充 doUrl、router 等方法
 - **文件**: `src/views/online/useOnlineForm.ts`
-- **状态**: [ ] 待修复
+- **状态**: [x] 已修复 (commit 87925de)
 
 ### Task 2.5: 修复 OnlineCustomBlock 栅格布局
 - **问题**: 原始使用 `u-row`/`u-col` 栅格系统支持 `span` 列宽，迁移后改为简单 div 布局，所有组件全宽显示
 - **修复方案**: 使用 vant 的 `van-row`/`van-col` 或 CSS Grid 实现栅格布局
 - **文件**: `src/views/components/Online/OnlineCustomBlock.vue`
-- **状态**: [ ] 待修复
+- **状态**: [x] 已修复 (commit 87925de)
 
 ### Task 2.6: 补全 OnlineCustomWidget 缺失的约15种组件类型渲染分支
 - **缺失组件类型**:
@@ -90,74 +90,74 @@
   - 图表类型 (isChart) → 需要 OnlineCustomChart
 - **修复方案**: 在 OnlineCustomWidget 模板中逐个添加条件分支，引用已有或新建的组件
 - **文件**: `src/views/components/Online/OnlineCustomWidget.vue`
-- **状态**: [ ] 待修复
+- **状态**: [x] 已修复 (commit 87925de)
 
 ### Task 2.7: 新建 OnlineCustomFilterBox 筛选组件
 - **问题**: 列表页筛选功能完全缺失
 - **原始功能**: 支持排序和筛选，底部弹出式筛选面板，含"重置"和"确定"按钮，emit refresh/reset 事件
 - **修复方案**: 基于 vant 的 `van-popup` + `van-cell` 新建筛选组件
 - **文件**: 新建 `src/views/components/Online/OnlineCustomFilterBox.vue`
-- **状态**: [ ] 待修复
+- **状态**: [x] 已修复 (commit 87925de)
 
 ### Task 2.8: 新建 OnlineCustomTabs 标签页组件
 - **问题**: 标签页分组渲染功能缺失
 - **原始功能**: 使用 `u-tabs` 渲染多标签切换，每个 tab 下渲染 OnlineCustomBlock
 - **修复方案**: 使用 vant 的 `van-tabs` + `van-tab` 实现
 - **文件**: 新建 `src/views/components/Online/OnlineCustomTabs.vue`
-- **状态**: [ ] 待修复
+- **状态**: [x] 已修复 (commit 87925de)
 
 ### Task 2.9: 新建 OnlineRelationSelect 关联选择组件
 - **问题**: 关联表选择功能完全缺失
 - **原始功能**: 弹出 OnlineForm 进行关联数据选择，支持单选/多选，自动加载关联数据并显示
 - **修复方案**: 基于 `van-popup` + `OnlineQueryForm` 新建组件
 - **文件**: 新建 `src/views/components/Online/OnlineRelationSelect.vue`
-- **状态**: [ ] 待修复
+- **状态**: [x] 已修复 (commit 87925de)
 
 ### Task 2.10: 新建 OnlineCustomChart 图表组件
 - **问题**: 在线表单中的图表功能缺失
 - **原始功能**: 支持11种图表类型，集成 ReportDatasetController 数据加载
 - **修复方案**: 基于已有的 `src/views/components/Charts/` 组件封装
 - **文件**: 新建 `src/views/components/Online/OnlineCustomChart.vue`
-- **状态**: [ ] 待修复
+- **状态**: [x] 已修复 (commit 87925de)
 
 ### Task 2.11: 新建 OnlineImageCard 图片卡片组件
 - **问题**: 关联选择卡片展示简化
 - **原始功能**: 支持左右图片布局、字典值显示、选择功能（checkbox），内嵌 OnlineCustomImage 和 OnlineCustomBlock
 - **修复方案**: 基于 vant 的 `van-card` + `van-checkbox` 新建
 - **文件**: 新建 `src/views/components/Online/OnlineImageCard.vue`
-- **状态**: [ ] 待修复
+- **状态**: [x] 已修复 (commit 87925de)
 
 ### Task 2.12: 修复 OnlineCustomList 增删改操作
 - **问题**: `onAddClick`/`onEditClick`/`onDeleteClick` 仅有 console.log，实际业务逻辑未实现
 - **缺失内容**: `form().handlerOperation` 调用、级联数据处理 (`__cascade_add_id__`)、权限校验 (`checkOperationVisible`)、删除确认弹窗、数据变更回调 (`AFTER_LOAD_TABLE_DATA`)
 - **修复方案**: 完整实现增删改操作逻辑
 - **文件**: `src/views/components/Online/OnlineCustomList.vue`
-- **状态**: [ ] 待修复
+- **状态**: [x] 已修复 (commit 87925de)
 
 ### Task 2.13: 修复 OnlineQueryForm 流程详情跳转
 - **问题**: `onFlowDetails` 方法为 TODO 注释
 - **修复方案**: 实现 flowDetails 跳转到流程详情页
 - **文件**: `src/views/online/OnlineQueryForm.vue`
-- **状态**: [ ] 待修复
+- **状态**: [x] 已修复 (commit 87925de)
 
 ### Task 2.14: 修复 OnlineCustomWidget 字典加载丢失报表字典模式
 - **问题**: 仅保留在线表单字典模式，报表字典模式丢失
 - **原始实现**: 区分报表字典和在线表单字典两种模式
 - **修复方案**: 恢复报表字典加载逻辑
 - **文件**: `src/views/components/Online/OnlineCustomWidget.vue`
-- **状态**: [ ] 待修复
+- **状态**: [x] 已修复 (commit 87925de)
 
 ### Task 2.15: 恢复字段组件的 validateWidget 方法
 - **问题**: 所有字段组件（Field*.vue）的 `validateWidget` 方法被移除
 - **修复方案**: 在各字段组件中恢复 validateWidget 方法
 - **文件**: `src/views/components/Field*.vue`（所有字段组件）
-- **状态**: [ ] 待修复
+- **状态**: [x] 已修复 (commit 87925de)
 
 ### Task 2.16: 修复 OnlineCustomWidget 缺少 parentWidget 注入
 - **问题**: 原始项目通过 inject `parentWidget` 实现父子组件通信，迁移后移除
 - **修复方案**: 恢复 parentWidget 的 provide/inject
 - **文件**: `src/views/components/Online/OnlineCustomWidget.vue`
-- **状态**: [ ] 待修复
+- **状态**: [x] 已修复 (commit 87925de)
 
 ---
 
@@ -284,7 +284,7 @@
 | Phase | 总任务数 | 已完成 | 进度 |
 |-------|---------|--------|------|
 | Phase 1: 基础设施 | 3 | 3 | 100% |
-| Phase 2: 在线表单 | 16 | 0 | 0% |
+| Phase 2: 在线表单 | 16 | 16 | 100% |
 | Phase 3: 流程审批 | 9 | 0 | 0% |
 | Phase 4: 公共组件 | 2 | 0 | 0% |
 | Phase 5: 细节修复 | 4 | 0 | 0% |

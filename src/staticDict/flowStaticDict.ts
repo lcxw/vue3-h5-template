@@ -136,6 +136,11 @@ export const SysFlowTaskOperationType = new DictionaryBase('任务操作类型',
     symbol: 'MULTI_REFUSE'
   },
   {
+    id: 'parallel_refuse',
+    name: '并行拒绝',
+    symbol: 'PARALLEL_REFUSE'
+  },
+  {
     id: 'multi_abstain',
     name: '弃权（会签）',
     symbol: 'MULTI_ABSTAIN'

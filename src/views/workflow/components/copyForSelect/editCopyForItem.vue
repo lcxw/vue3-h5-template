@@ -4,10 +4,13 @@ import type { CopyItem } from '../../types'
  * 编辑抄送项组件
  * 用于选择抄送的人员、部门、角色、岗位等
  */
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { SysCommonBizController } from '@/api'
 import { SysFlowCopyForType } from '@/staticDict/flowStaticDict'
 import { getHeadImageUrl, treeDataTranslate } from '@/utils/index'
+import { findTreeNodeObjectPath } from '@/views/components/utils'
+import CustomCascaderPanel from '@/views/components/CustomCascaderPanel/index.vue'
+import CustomSelectPanel from '@/views/components/CustomSelectPanel/index.vue'
 
 /**
  * 组件属性定义
@@ -46,6 +49,17 @@ const showTypePicker = ref(false)
 const selectCopyForItem = ref<string[]>([])
 /** 选中的抄送类型 */
 const copyTypeValue = ref<{ id: string, name: string }>({ id: 'user', name: '抄送人' })
+/** 时间戳，用于触发级联面板刷新 */
+const time = ref(0)
+
+/** 用户列表面板引用 */
+const userListRef = ref<InstanceType<typeof CustomSelectPanel> | null>(null)
+/** 部门级联面板引用 */
+const deptListRef = ref<InstanceType<typeof CustomCascaderPanel> | null>(null)
+/** 角色/岗位列表面板引用 */
+const dataListRef = ref<InstanceType<typeof CustomSelectPanel> | null>(null)
+/** 部门岗位级联面板引用 */
+const deptPostListRef = ref<InstanceType<typeof CustomCascaderPanel> | null>(null)
 
 /** 抄送类型列表 */
 const typeColumns = computed(() => {
@@ -55,32 +69,73 @@ const typeColumns = computed(() => {
   }))
 })
 
-/** 过滤后的用户列表 */
-const filteredUserList = computed(() => {
-  // 这里需要从API获取用户列表
+/** 部门树形数据 */
+const deptTree = computed(() => {
+  const tempList = (props.deptList || []).map(item => ({
+    ...item,
+    checked: false,
+  }))
+  return treeDataTranslate(tempList)
+})
+
+/** 部门岗位树形数据 */
+const deptPostTree = computed(() => {
+  if (Array.isArray(props.deptList) && Array.isArray(props.deptPostList)) {
+    const tempList = props.deptList.map(item => ({
+      ...item,
+      isDept: true,
+      showCheckbox: false,
+    })).concat(props.deptPostList.map(deptPost => ({
+      ...deptPost,
+      parentId: deptPost.deptId,
+      id: deptPost.deptPostId,
+      name: deptPost.postShowName,
+      showCheckbox: true,
+    })))
+    return treeDataTranslate(tempList)
+  }
   return []
 })
 
-/** 过滤后的部门列表 */
-const filteredDeptList = computed(() => {
-  if (!searchVal.value)
-    return props.deptList
-  return props.deptList.filter(item => item.name?.includes(searchVal.value))
-})
+/**
+ * 加载系统用户数据（分页）
+ * @param pageNum 页码
+ * @returns 用户列表数据及总数
+ */
+function loadSysUserData(pageNum: number): Promise<{ dataList: any[], totalCount: number }> {
+  const showName = searchVal.value
+  return SysCommonBizController.list({
+    widgetType: 'upms_user',
+    pageParam: {
+      pageNum,
+      pageSize: 20,
+      count: false,
+    },
+    filter: {
+      showName,
+    },
+  }).then((res: any) => {
+    if (res.dataList == null) res.dataList = []
+    res.dataList.forEach((item: any) => {
+      item.id = item.loginName
+      item.name = item.showName
+    })
+    return {
+      dataList: res.dataList,
+      totalCount: res.totalCount,
+    }
+  })
+}
 
-/** 过滤后的角色列表 */
-const filteredRoleList = computed(() => {
-  if (!searchVal.value)
-    return props.roleList
-  return props.roleList.filter(item => item.name?.includes(searchVal.value))
-})
-
-/** 过滤后的岗位列表 */
-const filteredPostList = computed(() => {
-  if (!searchVal.value)
-    return props.postList
-  return props.postList.filter(item => item.name?.includes(searchVal.value))
-})
+/**
+ * 选项过滤方法
+ * @param data 选项数据
+ * @returns 是否匹配搜索条件
+ */
+function filterListItem(data: Record<string, any>): boolean {
+  if (data == null || data.name == null) return false
+  return searchVal.value == null || searchVal.value === '' || data.name.indexOf(searchVal.value) !== -1
+}
 
 /**
  * 返回上一页
@@ -99,66 +154,6 @@ function onTypeConfirm(value: { text: string, value: string }): void {
   }
   selectCopyForItem.value = []
   showTypePicker.value = false
-}
-
-/**
- * 切换用户选择
- */
-function toggleUser(item: Record<string, any>): void {
-  if (copyItemDisabled(item))
-    return
-  const index = selectCopyForItem.value.indexOf(item.loginName)
-  if (index === -1) {
-    selectCopyForItem.value.push(item.loginName)
-  }
-  else {
-    selectCopyForItem.value.splice(index, 1)
-  }
-}
-
-/**
- * 切换部门选择
- */
-function toggleDept(item: Record<string, any>): void {
-  if (copyItemDisabled(item))
-    return
-  const index = selectCopyForItem.value.indexOf(item.id)
-  if (index === -1) {
-    selectCopyForItem.value.push(item.id)
-  }
-  else {
-    selectCopyForItem.value.splice(index, 1)
-  }
-}
-
-/**
- * 切换角色选择
- */
-function toggleRole(item: Record<string, any>): void {
-  if (copyItemDisabled(item))
-    return
-  const index = selectCopyForItem.value.indexOf(item.id)
-  if (index === -1) {
-    selectCopyForItem.value.push(item.id)
-  }
-  else {
-    selectCopyForItem.value.splice(index, 1)
-  }
-}
-
-/**
- * 切换岗位选择
- */
-function togglePost(item: Record<string, any>): void {
-  if (copyItemDisabled(item))
-    return
-  const index = selectCopyForItem.value.indexOf(item.id)
-  if (index === -1) {
-    selectCopyForItem.value.push(item.id)
-  }
-  else {
-    selectCopyForItem.value.splice(index, 1)
-  }
 }
 
 /**
@@ -183,15 +178,19 @@ function resetClick(): void {
 }
 
 /**
- * 确认选择
+ * 搜索处理，重置所有面板并触发刷新
  */
-async function confirmClick(): void {
-  const formData = await buildCopyForItemList()
-  emit('close', formData)
+function onSearch(): void {
+  if (userListRef.value) userListRef.value.reset()
+  if (deptListRef.value) deptListRef.value.reset()
+  if (dataListRef.value) dataListRef.value.reset()
+  if (deptPostListRef.value) deptPostListRef.value.reset()
+  time.value++
 }
 
 /**
  * 根据抄送类型构建抄送数据
+ * @returns 构建后的抄送数据或 undefined
  */
 async function buildCopyForItemList(): Promise<{ type: string, value: CopyItem[] } | undefined> {
   const type = copyTypeValue.value.id
@@ -214,23 +213,41 @@ async function buildCopyForItemList(): Promise<{ type: string, value: CopyItem[]
     }
   }
   else if (type === 'dept') {
-    value = props.deptList
-      .filter(item => selectCopyForItem.value.includes(item.id))
-      .map(item => ({
-        id: item.id,
-        name: item.name,
-      }))
+    // 部门类型：通过树形路径获取完整层级名称
+    value = selectCopyForItem.value
+      .map(id => {
+        const path = findTreeNodeObjectPath(deptTree.value, id, 'id', 'children')
+        if (path.length > 0) {
+          const deptItem = path[path.length - 1] as Record<string, any>
+          return {
+            ...deptItem,
+            id: deptItem.id,
+            name: path.map(item => (item as Record<string, any>).name).join(' / '),
+          }
+        }
+        return null
+      })
+      .filter((item): item is CopyItem => item != null)
   }
   else if (type === 'deptPostLeader' || type === 'upDeptPostLeader') {
-    value = []
+    // 部门领导类型无需选择具体项
+    return { type, value: [] }
   }
   else if (type === 'deptPost') {
-    value = props.deptPostList
-      .filter(item => selectCopyForItem.value.includes(item.deptPostId))
-      .map(item => ({
-        id: item.deptPostId,
-        name: item.postShowName,
-      }))
+    // 部门岗位类型：通过树形路径获取完整层级名称
+    value = selectCopyForItem.value
+      .map(id => {
+        const path = findTreeNodeObjectPath(deptPostTree.value, id, 'id', 'children')
+        if (path.length > 0) {
+          const deptPostItem = path[path.length - 1] as Record<string, any>
+          return {
+            id: deptPostItem.id,
+            name: path.map(item => (item as Record<string, any>).name).join(' / '),
+          }
+        }
+        return null
+      })
+      .filter((item): item is CopyItem => item != null)
   }
   else {
     // 角色、岗位等
@@ -247,10 +264,11 @@ async function buildCopyForItemList(): Promise<{ type: string, value: CopyItem[]
 }
 
 /**
- * 搜索
+ * 确认选择
  */
-function onSearch(): void {
-  // 搜索时触发列表更新
+async function confirmClick(): Promise<void> {
+  const formData = await buildCopyForItemList()
+  emit('close', formData)
 }
 
 onMounted(() => {
@@ -314,80 +332,63 @@ onMounted(() => {
     <div class="copy-item-select">
       <van-cell-group inset>
         <!-- 抄送人 -->
-        <div v-if="copyTypeValue.id === 'user'" class="select-panel">
-          <van-checkbox-group v-model="selectCopyForItem">
-            <van-cell
-              v-for="item in filteredUserList"
-              :key="item.loginName"
-              clickable
-              @click="toggleUser(item)"
-            >
-              <template #title>
-                <span>{{ item.showName }}</span>
-              </template>
-              <template #right-icon>
-                <van-checkbox :name="item.loginName" :disabled="copyItemDisabled(item)" />
-              </template>
-            </van-cell>
-          </van-checkbox-group>
-        </div>
+        <CustomSelectPanel
+          v-if="copyTypeValue.id === 'user'"
+          ref="userListRef"
+          v-model:value="selectCopyForItem"
+          height="100%"
+          :props="{ text: 'name', value: 'loginName', disabled: copyItemDisabled }"
+          :multiple="true"
+          :data-list="loadSysUserData"
+        />
 
         <!-- 抄送部门 -->
-        <div v-if="copyTypeValue.id === 'dept'" class="select-panel">
-          <van-checkbox-group v-model="selectCopyForItem">
-            <van-cell
-              v-for="item in filteredDeptList"
-              :key="item.id"
-              clickable
-              @click="toggleDept(item)"
-            >
-              <template #title>
-                <span>{{ item.name }}</span>
-              </template>
-              <template #right-icon>
-                <van-checkbox :name="item.id" :disabled="copyItemDisabled(item)" />
-              </template>
-            </van-cell>
-          </van-checkbox-group>
-        </div>
+        <CustomCascaderPanel
+          v-if="copyTypeValue.id === 'dept'"
+          ref="deptListRef"
+          v-model:value="selectCopyForItem"
+          :options="deptTree"
+          :props="{ text: 'name', value: 'id', disabled: copyItemDisabled }"
+          :multiple="true"
+          :time="time"
+          :filter="filterListItem"
+        />
 
         <!-- 抄送角色 -->
-        <div v-if="copyTypeValue.id === 'role'" class="select-panel">
-          <van-checkbox-group v-model="selectCopyForItem">
-            <van-cell
-              v-for="item in filteredRoleList"
-              :key="item.id"
-              clickable
-              @click="toggleRole(item)"
-            >
-              <template #title>
-                <span>{{ item.name }}</span>
-              </template>
-              <template #right-icon>
-                <van-checkbox :name="item.id" :disabled="copyItemDisabled(item)" />
-              </template>
-            </van-cell>
-          </van-checkbox-group>
-        </div>
+        <CustomSelectPanel
+          v-if="copyTypeValue.id === 'role'"
+          ref="dataListRef"
+          v-model:value="selectCopyForItem"
+          height="100%"
+          :props="{ text: 'name', value: 'id', disabled: copyItemDisabled }"
+          :multiple="true"
+          :data-list="roleList"
+          :filter="filterListItem"
+        />
 
         <!-- 抄送岗位 -->
-        <div v-if="['allDeptPost', 'selfDeptPost', 'siblingDeptPost', 'upDeptPost'].includes(copyTypeValue.id)" class="select-panel">
-          <van-checkbox-group v-model="selectCopyForItem">
-            <van-cell
-              v-for="item in filteredPostList"
-              :key="item.id"
-              clickable
-              @click="togglePost(item)"
-            >
-              <template #title>
-                <span>{{ item.name }}</span>
-              </template>
-              <template #right-icon>
-                <van-checkbox :name="item.id" :disabled="copyItemDisabled(item)" />
-              </template>
-            </van-cell>
-          </van-checkbox-group>
-        </div>
+        <CustomSelectPanel
+          v-if="['allDeptPost', 'selfDeptPost', 'siblingDeptPost', 'upDeptPost'].includes(copyTypeValue.id)"
+          ref="dataListRef"
+          v-model:value="selectCopyForItem"
+          height="100%"
+          :props="{ text: 'name', value: 'id', disabled: copyItemDisabled }"
+          :multiple="true"
+          :data-list="postList"
+          :filter="filterListItem"
+        />
+
+        <!-- 指定部门岗位 -->
+        <CustomCascaderPanel
+          v-if="copyTypeValue.id === 'deptPost'"
+          ref="deptPostListRef"
+          v-model:value="selectCopyForItem"
+          :options="deptPostTree"
+          :props="{ text: 'name', value: 'id', disabled: copyItemDisabled, showCheckbox: 'showCheckbox' }"
+          :multiple="true"
+          :time="time"
+          :filter="filterListItem"
+        />
       </van-cell-group>
     </div>
 

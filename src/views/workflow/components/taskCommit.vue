@@ -65,8 +65,11 @@
         />
         <van-popup v-model:show="showUserPicker" position="bottom" round style="height: 60%;">
           <UserSelect
+            ref="userSelectRef"
             :value="formData.assignee"
             :props="{ label: 'showName', value: 'userId' }"
+            :multiple="multiSelect"
+            :filter-object="otherFilterObject"
             @change="onUserSelectChange"
           />
         </van-popup>
@@ -142,6 +145,9 @@ import { SysFlowTaskOperationType } from '@/staticDict/flowStaticDict'
 import UserSelect from '@/views/components/UserSelect/index.vue'
 import type { FlowOperation } from '../types'
 
+/** 用户选择组件引用 */
+const userSelectRef = ref()
+
 /**
  * 组件属性定义
  */
@@ -180,6 +186,8 @@ const formData = ref({
 const userName = ref<string[]>([])
 /** 用户名显示文本（可写，用于 v-model 绑定） */
 const userNameDisplay = ref('')
+/** 用户选择过滤对象（用于 SET_ASSIGNEE 操作时传递筛选条件） */
+const otherFilterObject = ref<Record<string, unknown> | undefined>(undefined)
 
 /** 弹窗显示状态 */
 const showJumpTaskPicker = ref(false)
@@ -189,12 +197,28 @@ const showMinusSignPicker = ref(false)
 const showPhrasePicker = ref(false)
 
 /**
+ * 是否多选用户
+ * 转办、加签、会签、前后加签、指定审批人等操作允许多选
+ */
+const multiSelect = computed(() => {
+  const multiTypes = [
+    SysFlowTaskOperationType.getById('multi_consign')?.id,
+    SysFlowTaskOperationType.getById('multi_sign')?.id,
+    SysFlowTaskOperationType.getById('multi_before_consign')?.id,
+    SysFlowTaskOperationType.getById('multi_after_consign')?.id,
+    SysFlowTaskOperationType.getById('transfer')?.id,
+    SysFlowTaskOperationType.getById('set_assignee')?.id,
+  ]
+  return multiTypes.includes(props.operation.type)
+})
+
+/**
  * 用户选择变更
  * @param val - 选中的用户
  */
 function onUserSelectChange(val: any): void {
   if (val) {
-    formData.assignee = val.userId || val
+    formData.value.assignee = val.userId || val
     userNameDisplay.value = val.showName || val.userId || ''
     showUserPicker.value = false
   }
@@ -275,7 +299,8 @@ function goBack(): void {
  */
 function onSubmitClick(): void {
   if (Array.isArray(userName.value) && userName.value.length > 0) {
-    formData.value.assignee = userName.value.join(',')
+    const selectItems = userSelectRef.value ? userSelectRef.value.getSelectItems() : []
+    formData.value.assignee = selectItems.map((item: any) => item.loginName).join(',')
   }
   emit('close', true, formData.value)
 }
@@ -375,6 +400,18 @@ function loadAllUserTask(): void {
 
 onMounted(() => {
   getPhraseList()
+
+  // SET_ASSIGNEE 操作时，初始化用户选择过滤对象
+  if (props.operation.type === SysFlowTaskOperationType.getById('set_assignee')?.id && props.operation.multiSignAssignee) {
+    if (props.operation.multiSignAssignee.assigneeType && props.operation.multiSignAssignee.assigneeList) {
+      otherFilterObject.value = {
+        USER_FILTER_GROUP: JSON.stringify({
+          type: props.operation.multiSignAssignee.assigneeType,
+          values: props.operation.multiSignAssignee.assigneeList,
+        }),
+      }
+    }
+  }
 
   // 减签操作
   if (props.operation.type === SysFlowTaskOperationType.getById('multi_minus_sign')?.id) {
