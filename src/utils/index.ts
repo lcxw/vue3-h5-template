@@ -516,12 +516,33 @@ export function showConfirm(content: string, title: string = '提示'): Promise<
   })
 }
 
-export function showMessage(title: string, _type: string = 'none'): Promise<void> {
+/**
+ * Task 1.2: 显示消息提示，支持 success/error/none 类型
+ * @param title 消息文本
+ * @param iconType 图标类型: success / error / none
+ */
+export function showMessage(title: string, iconType: string = 'none'): Promise<void> {
   return new Promise((resolve) => {
-    showToast({
-      message: title,
-      duration: 2000,
-    })
+    if (iconType === 'success') {
+      showToast({
+        message: title,
+        icon: 'passed',
+        duration: 2000,
+      })
+    }
+    else if (iconType === 'error') {
+      showToast({
+        message: title,
+        icon: 'cross',
+        duration: 2000,
+      })
+    }
+    else {
+      showToast({
+        message: title,
+        duration: 2000,
+      })
+    }
     resolve()
   })
 }

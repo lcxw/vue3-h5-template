@@ -4,7 +4,11 @@ import { closeToast, showFailToast, showLoadingToast } from 'vant'
 import router from '@/router'
 import { ContentTypeEnum } from '@/enums/request-enum'
 import NProgress from '../progress'
+import { createJsonBigint } from '../jsonBigint'
 import 'vant/es/toast/style'
+
+// Task 1.1: 创建 JSON BigInt 解析实例，防止后端 Long 类型 ID 精度丢失
+const jsonBigintParser = createJsonBigint({ storeAsString: true })
 
 // 默认 Axios 实例请求配置
 const configDefault: AxiosRequestConfig = {
@@ -15,6 +19,20 @@ const configDefault: AxiosRequestConfig = {
   timeout: 30000,
   baseURL: import.meta.env.VITE_BASE_API,
   data: {},
+  // Task 1.1: 使用 BigInt 安全解析响应数据
+  transformResponse: [
+    function (data: any) {
+      if (typeof data === 'string') {
+        try {
+          return jsonBigintParser.parse(data)
+        }
+        catch {
+          return data
+        }
+      }
+      return data
+    },
+  ],
 }
 
 // HTTP 状态码 → 错误消息映射
@@ -95,9 +113,12 @@ axiosInstance.interceptors.response.use(
     if (res.success) {
       return res.data === undefined ? {} : res.data
     }
-    // 401 处理
+    // 401 处理（Task 1.3: 支持 _skipAuthRedirect 跳过自动重定向）
     if (res.errorCode === 401 || res.code === 401) {
-      handleAuthExpired()
+      const skipRedirect = (response.config as any)?._skipAuthRedirect
+      if (!skipRedirect) {
+        handleAuthExpired()
+      }
       return Promise.reject(new Error(res.errorMessage || '登录已过期'))
     }
     // 业务错误
