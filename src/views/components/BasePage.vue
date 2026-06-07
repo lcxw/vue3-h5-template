@@ -23,6 +23,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { getSystemInfo, getBoundingClientRect } from './utils'
 
 /**
@@ -49,6 +50,8 @@ const emit = defineEmits<{
   (e: 'back'): void
 }>()
 
+const router = useRouter()
+
 const systemInfo = getSystemInfo()
 const rect = getBoundingClientRect(systemInfo.windowWidth, systemInfo.statusBarHeight)
 
@@ -72,6 +75,7 @@ const titleNavHeight = computed(() => Math.max((rect.top - systemInfo.statusBarH
  */
 function goBack() {
   emit('back')
+  router.back()
 }
 </script>
 

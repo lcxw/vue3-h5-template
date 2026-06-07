@@ -405,6 +405,14 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
    */
   const getWidgetValue = (widget: Widget, rowData?: any): any => {
     const data = rowData || formData
+    // bindData 为空时直接返回 undefined
+    if (widget.bindData == null) return undefined
+    // DEBUG: 跟踪上传组件的值获取
+    if (widget.widgetType === SysCustomWidgetType.Upload) {
+      console.log('[getWidgetValue] Upload widget: ds=%s rel=%s col=%s bindDataType=%o formData[ds]=%o',
+        widget.datasource?.variableName, widget.relation?.variableName, widget.column?.columnName,
+        widget.bindData?.dataType, widget.datasource ? data[widget.datasource.variableName] : '(no ds)')
+    }
     // 列表组件
     if (widget.widgetType === SysCustomWidgetType.List) {
       if (widget.relation && data[widget.relation.variableName]) {
@@ -466,6 +474,7 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
    * @returns 属性路径字符串
    */
   const getWidgetProp = (widget: Widget, value?: any): string | undefined => {
+    if (widget.bindData == null) return undefined
     if (widget.bindData.dataType === SysCustomWidgetBindDataType.Column && widget.column) {
       if (widget.relation && formData[widget.relation.variableName]) {
         return `${widget.relation.variableName}.${widget.column.columnName}`
@@ -487,6 +496,8 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
    */
   const onValueChange = (widget: Widget, value: any): void => {
     if (formReadOnly.value)
+      return
+    if (widget.bindData == null)
       return
     // 列表组件
     if (widget.widgetType === SysCustomWidgetType.List) {
@@ -624,6 +635,8 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
   const onWidgetValueChange = (widget: Widget, value: any, detail?: any): void => {
     if (formReadOnly.value)
       return
+    if (widget.bindData == null)
+      return
     const dictData = (detail || {}).dictData
     // 更新字典数据
     if (dictData != null) {
@@ -705,13 +718,44 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
   }
 
   /**
+   * 创建事件函数的上下文对象
+   * 模拟 Vue 2 组件实例的 this，使事件脚本可以通过 this.formData 等访问数据
+   */
+  const buildEventContext = (): Record<string, any> => ({
+    formData,
+    form: builtFormConfig.value,
+    masterTable: masterTable.value,
+    isRelation,
+    isReady: isReady.value,
+    readOnly: formReadOnly.value,
+    formAuth: formAuth.value,
+    flowData: options.flowInfo?.value,
+    getWidgetValue,
+    getWidgetValueByColumn,
+    onValueChange,
+    getDropdownParams,
+    getDictDataList,
+    getPrimaryData,
+    getWidgetVisible,
+    getSystemVariableValue,
+  })
+
+  /**
+   * 将事件函数绑定到表单上下文
+   * @param fun - 事件函数
+   */
+  const bindEvent = (fun: Function | null): Function | null => {
+    return fun ? fun.bind(buildEventContext()) : null
+  }
+
+  /**
    * 初始化表单组件列表
    */
   const initFormWidgetList = (): void => {
     if (Array.isArray(builtFormConfig.value.operationList)) {
       builtFormConfig.value.operationList.forEach((operation) => {
         operation.eventInfo = (operation.eventList || []).reduce((retObj: Record<string, Function>, event: any) => {
-          const fun = eventFunction(event)
+          const fun = bindEvent(eventFunction(event))
           if (fun)
             retObj[event.eventType] = fun
           return retObj
@@ -720,7 +764,7 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
     }
     if (Array.isArray(builtFormConfig.value.formEventList)) {
       builtFormConfig.value.eventInfo = builtFormConfig.value.formEventList.reduce((retObj: Record<string, Function>, event: any) => {
-        const fun = eventFunction(event)
+        const fun = bindEvent(eventFunction(event))
         if (fun)
           retObj[event.eventType] = fun
         return retObj
@@ -855,7 +899,7 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
           })
           widget.operationList.forEach((operation) => {
             operation.eventInfo = (operation.eventList || []).reduce((retObj: Record<string, Function>, event: any) => {
-              const fun = eventFunction(event)
+              const fun = bindEvent(eventFunction(event))
               if (fun)
                 retObj[event.eventType] = fun
               return retObj
@@ -888,7 +932,7 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
 
       if (Array.isArray(widget.eventList)) {
         widget.eventInfo = widget.eventList.reduce((retObj: Record<string, Function>, event: any) => {
-          const fun = eventFunction(event)
+          const fun = bindEvent(eventFunction(event))
           if (fun)
             retObj[event.eventType] = fun
           return retObj

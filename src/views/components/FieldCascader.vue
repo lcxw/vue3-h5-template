@@ -85,16 +85,22 @@ const treeDataList = computed(() => {
  * 计算显示值
  */
 const getShowValue = computed(() => {
-  if (Array.isArray(props.value)) {
-    const arr = props.value.map((item) => {
-      const path = findTreeNodeObjectPath(props.dataList, item, props.props.value, props.props.children)
+  if (props.value == null) return ''
+  try {
+    if (Array.isArray(props.value)) {
+      const arr = props.value.map((item) => {
+        const path = findTreeNodeObjectPath(props.dataList, item, props.props.value, props.props.children)
+        return path.map(p => p[props.props.label]).join(' / ')
+      })
+      return arr.join(',')
+    }
+    else {
+      const path = findTreeNodeObjectPath(props.dataList, props.value, props.props.value, props.props.children)
       return path.map(p => p[props.props.label]).join(' / ')
-    })
-    return arr.join(',')
+    }
   }
-  else {
-    const path = findTreeNodeObjectPath(props.dataList, props.value, props.props.value, props.props.children)
-    return path.map(p => p[props.props.label]).join(' / ')
+  catch {
+    return String(props.value ?? '')
   }
 })
 

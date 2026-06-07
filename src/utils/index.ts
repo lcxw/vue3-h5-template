@@ -181,7 +181,9 @@ export function buildGetUrl(actionName: string, params?: Record<string, any>): s
     return actionName + (queryString == null ? '' : `?${queryString}`)
   }
   else {
-    return projectConfig.baseUrl + actionName + (queryString == null ? '' : `?${queryString}`)
+    const base = projectConfig.baseUrl
+    const separator = base.endsWith('/') ? '' : '/'
+    return base + separator + actionName + (queryString == null ? '' : `?${queryString}`)
   }
 }
 

@@ -43,7 +43,13 @@ function getWidgetValue(widget: any): any {
   if (props.operation && typeof props.operation.getWidgetValue === 'function') {
     return props.operation.getWidgetValue(widget)
   }
-  return form().getWidgetValue(widget)
+  const val = form().getWidgetValue(widget)
+  // 调试：跟踪上传组件的值
+  if (widget.propString && widget.propString.includes('FJ')) {
+    console.log('[OnlineCustomBlock.getWidgetValue] prop=%s val=%o widget.column=%o',
+      widget.propString, val, widget.column?.columnName)
+  }
+  return val
 }
 
 /**

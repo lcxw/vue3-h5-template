@@ -22,6 +22,7 @@ import FieldRate from '../FieldRate.vue'
 import FieldCascader from '../FieldCascader.vue'
 import FieldUpload from '../FieldUpload.vue'
 import CustomText from '../CustomText.vue'
+import OnlineCustomImage from './OnlineCustomImage.vue'
 
 interface Props {
   /** 组件值 */
@@ -472,6 +473,20 @@ defineExpose({ reset })
       @change="onValueChange"
     />
 
+    <!-- 图片展示 -->
+    <OnlineCustomImage
+      v-if="widget.widgetType === SysCustomWidgetType.Image && !form().readOnly"
+      :value="bindValue"
+      :widget="widget"
+      :src="widgetProps.src"
+      :fit="widgetProps.fit"
+      :round="widgetProps.round"
+      :width="widgetProps.width || '100%'"
+      :height="widgetProps.height || '200px'"
+      :radius="widgetProps.radius"
+      :form-fn="form"
+    />
+
     <!-- 文件上传 -->
     <FieldUpload
       v-if="widget.widgetType === SysCustomWidgetType.Upload"
@@ -479,7 +494,10 @@ defineExpose({ reset })
       :required="widget.props?.required"
       :value="bindValue"
       :disabled="widgetProps.disabled"
+      :read-only="widgetProps.readonly"
       :prop="widget.propString"
+      :widget="widget"
+      :form-fn="form"
       @update:value="onValueInput"
       @change="onValueChange"
     />

@@ -161,7 +161,10 @@ function initFormData(): Promise<void> {
     httpCall.then((res) => {
       isStart.value = (res == null)
       // 流程数据
-      const masterData = (res || {})[masterTable.value?.datasource?.variableName || ''] || {}
+      const masterVarName = masterTable.value?.datasource?.variableName || ''
+      const masterData = (res || {})[masterVarName] || {}
+      console.log('[initFormData] masterVarName=%s res=%o masterData=%o', masterVarName, res, masterData)
+      console.log('[initFormData] masterData keys=%o FJ=%o FPFJ=%o', Object.keys(masterData), masterData['FJ'], masterData['FPFJ'])
       // 初始化表单字段
       const relationNameList = new Map<string, any>()
       let datasourceName: string | undefined
@@ -178,6 +181,7 @@ function initFormData(): Promise<void> {
           datasourceName = table.datasource.variableName
         }
       })
+      console.log('[initFormData] relationNameList keys=%o datasourceName=%s', [...relationNameList.keys()], datasourceName)
       Object.keys(masterData).forEach((key) => {
         const relation = relationNameList.get(key)
         const relationVariableName = (relation || {}).variableName

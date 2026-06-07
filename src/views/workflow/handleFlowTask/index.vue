@@ -657,6 +657,15 @@ onMounted(() => {
 
 <template>
   <div class="handle-flow-task">
+    <!-- 导航栏 -->
+    <van-nav-bar
+      fixed
+      placeholder
+      :title="taskDetailsData.flowEntryName || '任务详情'"
+      left-arrow
+      @click-left="router.back()"
+    />
+
     <!-- 任务详情头部 -->
     <div class="task-detail">
       <div class="task-info">
@@ -763,6 +772,7 @@ onMounted(() => {
   flex-direction: column;
   height: 100vh;
   background: #F6F7F9;
+  overflow: hidden;
 }
 
 .task-detail {
