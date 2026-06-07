@@ -77,10 +77,29 @@ const filterWidgetList = computed(() => {
 })
 
 /**
- * 获取排序列表
+ * 获取排序列表（含字段映射）
  */
 const sortList = computed(() => {
-  return queryTable.value?.props?.orderList || []
+  return (queryTable.value?.props?.orderList || []).map((item: any) => {
+    const table = form.value.tableMap?.get(item.tableId)
+    const column = form.value.columnMap?.get(item.columnId)
+    if ((masterTable.value || {}).tableId === (table || {}).tableId) {
+      // 主表字段
+      return {
+        ...item,
+        fieldName: column?.columnName,
+        asc: undefined,
+      }
+    }
+    else {
+      // 从表字段
+      return {
+        ...item,
+        fieldName: `${table?.tableName}.${column?.columnName}`,
+        asc: undefined,
+      }
+    }
+  })
 })
 
 /**

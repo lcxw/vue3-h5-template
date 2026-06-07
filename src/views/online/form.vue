@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * 在线表单入口页面
- * 用于加载和显示在线表单，支持子表单弹窗
+ * 用于加载和显示在线表单，支持子表单弹窗、删除模式切换
  */
 import { onActivated, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -24,10 +24,11 @@ const editRowData = ref<any>(undefined)
 const barType = ref(0)
 // 时间戳（用于强制刷新）
 const date = ref(Date.now())
+// OnlineQueryForm 组件引用
+const queryFormRef = ref<InstanceType<typeof OnlineQueryForm> | null>(null)
 
 /**
  * 关闭子表单
- * @param refresh - 是否需要刷新
  */
 function closeSubPage() {
   showSubPage.value = false
@@ -49,6 +50,13 @@ function onCloseSubForm(refresh: boolean) {
  */
 function closed() {
   router.back()
+}
+
+/**
+ * 切换删除模式
+ */
+function toggleDelete() {
+  queryFormRef.value?.toggleDelete()
 }
 
 /**

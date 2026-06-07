@@ -454,6 +454,22 @@ onMounted(() => {
     tableWidget.value.loadDataList(1)
   })
 })
+
+/**
+ * 切换删除模式
+ */
+function toggleDelete() {
+  showDelete.value = !showDelete.value
+  if (!showDelete.value) {
+    selectItemList.value = []
+    selectAll.value = false
+  }
+}
+
+// 暴露方法供父组件调用
+defineExpose({
+  toggleDelete,
+})
 </script>
 
 <template>

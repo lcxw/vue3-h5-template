@@ -6,7 +6,8 @@ import { showDialog, showToast } from 'vant'
  */
 import { computed, nextTick, onMounted, provide, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { doUrl } from '@/common/ajax'
+import { FlowOperationController } from '@/api/FlowController/FlowOperationController'
+import { FlowEntryController } from '@/api/FlowController/FlowEntryController'
 import { OnlineFormEventType, SysCustomWidgetOperationType, SysFlowTaskOperationType, SysFlowTaskType, SysFlowWorkOrderStatus } from '@/staticDict/index'
 import { findItemFromList } from '@/utils/index'
 import { TableWidget } from '@/utils/widget'
@@ -185,7 +186,7 @@ async function loadTableData(params: any): Promise<{ dataList: any[], totalCount
     if (params == null) {
       throw new Error('取消加载数据')
     }
-    const res = await doUrl('/admin/flow/flowOperation/listWorkOrder', 'post', params)
+    const res = await FlowOperationController.listWorkOrder(params)
     res.dataList = res.dataList.map((item: any) => {
       const initTaskInfo = item.initTaskInfo == null ? {} : (typeof item.initTaskInfo === 'string' ? JSON.parse(item.initTaskInfo) : item.initTaskInfo)
       const runtimeTaskInfo = (Array.isArray(item.runtimeTaskInfoList) && item.runtimeTaskInfoList.length > 0) ? item.runtimeTaskInfoList[0] : {}
@@ -227,7 +228,7 @@ function onStartFlow() {
   const params = {
     processDefinitionKey: processDefinitionKey.value,
   }
-  doUrl('/admin/flow/flowOperation/viewInitialTaskInfo', 'post', params).then((res) => {
+  FlowOperationController.viewInitialTaskInfo(params).then((res) => {
     if (res && res.taskType === SysFlowTaskType.USER_TASK && res.assignedMe) {
       const data = {
         processDefinitionKey: processDefinitionKey.value,
@@ -250,7 +251,7 @@ function onStartFlow() {
       })
     }
     else {
-      doUrl('/admin/flow/flowOperation/startOnly', 'post', {
+      FlowOperationController.startOnly({
         processDefinitionKey: processDefinitionKey.value,
       }).then(() => {
         showToast({
@@ -278,7 +279,7 @@ function onHandlerWorkOrder(row: any) {
     processDefinitionId: row.processDefinitionId,
     taskId,
   }
-  doUrl('/admin/flow/flowOperation/viewRuntimeTaskInfo', 'post', params).then((res) => {
+  FlowOperationController.viewRuntimeTaskInfo(params).then((res) => {
     const data = {
       isRuntime: true,
       isDraft: row.flowStatus === SysFlowWorkOrderStatus.DRAFT,
@@ -312,7 +313,7 @@ function onHandlerWorkOrder(row: any) {
 function onViewWorkOrder(row: any) {
   if (processDefinitionKey.value == null)
     return
-  doUrl('/admin/flow/flowOperation/viewInitialHistoricTaskInfo', 'post', {
+  FlowOperationController.viewInitialHistoricTaskInfo({
     processInstanceId: row.processInstanceId,
   }).then((res) => {
     const data = {
@@ -344,7 +345,7 @@ function onViewWorkOrder(row: any) {
  * @param row - 工单数据
  */
 function onHandlerRemindClick(row: any) {
-  doUrl('/admin/flow/flowOperation/remindRuntimeTask', 'post', {
+  FlowOperationController.remindRuntimeTask({
     workOrderId: row.workOrderId,
   }).then(() => {
     showToast({
@@ -368,7 +369,7 @@ function onCancelWorkOrder(row: any) {
       workOrderId: row.workOrderId,
       cancelReason: '主动撤销',
     }
-    doUrl('/admin/flow/flowOperation/cancelWorkOrder', 'post', params).then(() => {
+    FlowOperationController.cancelWorkOrder(params).then(() => {
       tableWidget.value.loadDataList(1)
       showToast({
         message: '撤销成功！',
@@ -404,7 +405,7 @@ watch(() => props.formConfig, (newConfig) => {
     initFormWidgetList()
     initWidgetRule()
     if (props.entryId) {
-      doUrl('/admin/flow/flowEntry/viewDict', 'post', {
+      FlowEntryController.viewDict({
         entryId: props.entryId,
       }).then((res) => {
         processDefinitionKey.value = res.processDefinitionKey
