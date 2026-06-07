@@ -149,10 +149,6 @@ export class TableWidget<T = Record<string, any>> {
   rowSelection: boolean
   searchVerify: () => boolean
   loadTableData: (params: LoadTableParams) => Promise<TableDataResponse<T>>
-  loadDataList: (pageNum: number) => void
-  onSortChange: (sortInfo?: SortInfo) => void
-  loadTableDataImpl: (pageNum: number, pageSize: number, reload?: boolean) => Promise<void>
-  refreshTable: (research?: boolean, pageNum?: number, showMsg?: boolean) => void
 
   /**
    * @param loadTableData - 表数据获取函数
@@ -194,104 +190,107 @@ export class TableWidget<T = Record<string, any>> {
     this.loadTableData = loadTableData || function () {
       return Promise.resolve({ dataList: [], totalCount: 0 })
     }
+  }
 
-    const _this = this
-
-    this.loadDataList = (pageNum: number) => {
-      if (typeof _this.loadTableData === 'function') {
-        const params: LoadTableParams = {}
-        if (_this.orderInfo.fieldName != null)
-          params.orderParam = [_this.orderInfo]
-        if (_this.paged) {
-          params.pageParam = {
-            pageNum,
-            pageSize: _this.pageSize,
-            count: false,
-          }
+  /**
+   * 加载列表数据
+   * 使用原型方法确保通过 Proxy 调用时 this 指向 Proxy，触发 Vue 响应式更新
+   * @param pageNum - 页码
+   */
+  loadDataList(pageNum: number): void {
+    if (typeof this.loadTableData === 'function') {
+      const params: LoadTableParams = {}
+      if (this.orderInfo.fieldName != null)
+        params.orderParam = [this.orderInfo]
+      if (this.paged) {
+        params.pageParam = {
+          pageNum,
+          pageSize: this.pageSize,
+          count: false,
         }
-        _this.loading = true
-        _this.finished = false
-        if (pageNum === 1) {
-          _this.dataList = []
-        }
-        _this.currentPage = pageNum
-        _this.loadTableData(params).then((tableData) => {
-          _this.dataList = _this.dataList.concat(tableData.dataList)
-          _this.totalCount = tableData.totalCount
-          _this.loading = false
-          if (tableData.finished != null) {
-            _this.finished = tableData.finished
-          }
-          else {
-            // 根据总数判断是否加载完成
-            _this.finished = _this.dataList.length >= _this.totalCount || tableData.dataList.length <= 0
-          }
-        }).catch((e) => {
-          console.error(e)
-          _this.loading = false
-          _this.finished = false
-        })
       }
-    }
-
-    /**
-     * 表格排序字段变化
-     * @param sortInfo - 排序信息
-     */
-    this.onSortChange = (sortInfo?: SortInfo) => {
-      _this.orderInfo.fieldName = (sortInfo || {}).asc == null ? undefined : sortInfo!.fieldName
-      _this.orderInfo.asc = (sortInfo || {}).asc
-    }
-
-    /**
-     * 获取表格数据
-     * @param pageNum - 当前分页
-     * @param pageSize - 每页数量
-     * @param reload - 是否重新获取数据
-     */
-    this.loadTableDataImpl = (pageNum: number, pageSize: number, reload = false) => {
-      return new Promise<void>((resolve, reject) => {
-        if (typeof _this.loadTableData !== 'function') {
-          reject()
+      this.loading = true
+      this.finished = false
+      if (pageNum === 1) {
+        this.dataList = []
+      }
+      this.currentPage = pageNum
+      this.loadTableData(params).then((tableData) => {
+        this.dataList = this.dataList.concat(tableData.dataList || [])
+        this.totalCount = tableData.totalCount || 0
+        this.loading = false
+        if (tableData.finished != null) {
+          this.finished = tableData.finished
         }
         else {
-          // 如果pageSize和pageNum没有变化，并且不强制刷新
-          if (_this.paged && !reload && _this.oldPage === pageNum && _this.oldPageSize === pageSize) {
-            resolve()
-          }
-          else {
-            const params: LoadTableParams = {}
-            if (_this.orderInfo.fieldName != null)
-              params.orderParam = [_this.orderInfo]
-            if (_this.paged) {
-              params.pageParam = {
-                pageNum,
-                pageSize,
-              }
-            }
-            _this.loading = true
-            _this.loadTableData(params).then((tableData) => {
-              _this.dataList = tableData.dataList
-              _this.totalCount = tableData.totalCount
-              _this.loading = false
-              resolve()
-            }).catch((e) => {
-              _this.loading = false
-              reject(e)
-            })
-          }
+          // 根据总数判断是否加载完成
+          this.finished = this.dataList.length >= this.totalCount || (tableData.dataList || []).length <= 0
         }
+      }).catch((e) => {
+        console.error(e)
+        this.loading = false
+        this.finished = true
       })
     }
+  }
 
-    /**
-     * 刷新表格数据
-     * @param research - 是否按照新的查询条件重新查询（调用verify函数）
-     * @param pageNum - 当前页面
-     */
-    this.refreshTable = (research = false, pageNum?: number, showMsg = false) => {
-      _this.loadDataList(pageNum || 1)
-    }
+  /**
+   * 表格排序字段变化
+   * @param sortInfo - 排序信息
+   */
+  onSortChange(sortInfo?: SortInfo): void {
+    this.orderInfo.fieldName = (sortInfo || {}).asc == null ? undefined : sortInfo!.fieldName
+    this.orderInfo.asc = (sortInfo || {}).asc
+  }
+
+  /**
+   * 获取表格数据
+   * @param pageNum - 当前分页
+   * @param pageSize - 每页数量
+   * @param reload - 是否重新获取数据
+   */
+  loadTableDataImpl(pageNum: number, pageSize: number, reload = false): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      if (typeof this.loadTableData !== 'function') {
+        reject()
+      }
+      else {
+        // 如果pageSize和pageNum没有变化，并且不强制刷新
+        if (this.paged && !reload && this.oldPage === pageNum && this.oldPageSize === pageSize) {
+          resolve()
+        }
+        else {
+          const params: LoadTableParams = {}
+          if (this.orderInfo.fieldName != null)
+            params.orderParam = [this.orderInfo]
+          if (this.paged) {
+            params.pageParam = {
+              pageNum,
+              pageSize,
+            }
+          }
+          this.loading = true
+          this.loadTableData(params).then((tableData) => {
+            this.dataList = tableData.dataList || []
+            this.totalCount = tableData.totalCount || 0
+            this.loading = false
+            resolve()
+          }).catch((e) => {
+            this.loading = false
+            reject(e)
+          })
+        }
+      }
+    })
+  }
+
+  /**
+   * 刷新表格数据
+   * @param research - 是否按照新的查询条件重新查询（调用verify函数）
+   * @param pageNum - 当前页面
+   */
+  refreshTable(research = false, pageNum?: number, showMsg = false): void {
+    this.loadDataList(pageNum || 1)
   }
 }
 

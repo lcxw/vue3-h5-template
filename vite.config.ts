@@ -56,6 +56,9 @@ export default defineConfig(({ mode }) => {
       host: true,
       // 仅在 proxy 中配置的代理前缀， mock-dev-server 才会拦截并 mock
       // doc: https://github.com/pengzhanbo/vite-plugin-mock-dev-server
+      port: 5173,
+      // 强制只使用这个端口
+      strictPort: true,
       proxy: {
         '^/dev-api': {
           target: 'http://10.10.10.211:8300',

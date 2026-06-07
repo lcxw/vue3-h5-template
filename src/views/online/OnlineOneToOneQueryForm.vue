@@ -243,11 +243,15 @@ async function loadTableData(params: any): Promise<{ dataList: any[], totalCount
 }
 
 /**
- * 加载列表数据
- * @param pageNum - 页码
+ * 加载列表数据（van-list @load 回调，不传页码参数）
+ * van-list 触发 @load 时不传递页码，需要根据当前状态自动计算下一页
  */
-function loadDataList(pageNum: number) {
-  tableWidget.value.loadDataList(pageNum)
+function loadDataList() {
+  const tw = tableWidget.value
+  const pageNum = tw.dataList.length === 0
+    ? 1
+    : tw.currentPage + 1
+  tw.loadDataList(pageNum)
 }
 
 // 提供表单上下文
