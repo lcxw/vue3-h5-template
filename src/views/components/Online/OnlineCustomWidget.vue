@@ -3,14 +3,28 @@
  * OnlineCustomWidget 在线自定义组件分发器
  * 根据 widgetType 分发到不同的表单控件，支持递归渲染
  */
-import { computed, inject, onMounted, ref } from 'vue'
+import { computed, inject, onMounted, provide, ref } from 'vue'
 import { findItemFromList } from '@/utils/index'
 import { SysCustomWidgetType, SysOnlineFieldKind, SysOnlineFormType, SysOnlineColumnFilterType } from '@/staticDict/index'
 import { getDictDataList } from '@/views/online/utils'
 import { isChart } from './utils'
 import OnlineCustomGroup from './OnlineCustomGroup.vue'
+import OnlineCustomTabs from './OnlineCustomTabs.vue'
 import OnlineFieldLabel from './OnlineFieldLabel.vue'
 import OnlineCustomList from './OnlineCustomList.vue'
+import OnlineCustomChart from './OnlineCustomChart.vue'
+import OnlineRelationSelect from './OnlineRelationSelect.vue'
+import UserSelect from '../UserSelect/index.vue'
+import DeptSelect from '../DeptSelect/index.vue'
+import SignaturePad from '../SignaturePad/index.vue'
+import FieldBarCode from '../FieldBarCode.vue'
+import FieldQRcode from '../FieldQRcode.vue'
+import FieldVideo from '../FieldVideo.vue'
+import SelectFilter from '../SelectFilter.vue'
+import SearchFilter from '../SearchFilter.vue'
+import SwitchFilter from '../SwitchFilter.vue'
+import NumberRangeFilter from '../NumberRangeFilter.vue'
+import DateRangeFilter from '../DateRangeFilter.vue'
 import FieldInput from '../FieldInput.vue'
 import FieldSelect from '../FieldSelect.vue'
 import FieldRadio from '../FieldRadio.vue'
@@ -40,6 +54,12 @@ const emit = defineEmits<{
 
 /** 注入表单上下文 */
 const formInject = inject<() => any>('form', undefined)
+
+/**
+ * 提供 parentWidget 给子组件注入
+ * Task 2.16: 恢复 parentWidget 注入
+ */
+provide('parentWidget', props.widget)
 
 /**
  * 安全获取表单上下文
@@ -217,6 +237,16 @@ const widgetProps = computed(() => {
     label: props.widget.showName,
     widget: props.widget,
     placeholder: p.placeholder || `请输入${props.widget.showName}`,
+    /** DataSelect 关联表配置 */
+    props: props.widget.widgetType === SysCustomWidgetType.DataSelect ? {
+      datasourceId: (p.relativeTable || {}).datasourceId,
+      relationId: (p.relativeTable || {}).relationId,
+      relativeFormId: (p.relativeTable || {}).relativeFormId,
+      variableName: (p.relativeTable || {}).variableName,
+      relationTableName: (p.relativeTable || {}).relativeTableName,
+      relationColumnName: (p.relativeTable || {}).relativeColumn,
+      displayField: (p.relativeTable || {}).displayField,
+    } : undefined,
   }
 })
 
@@ -286,14 +316,23 @@ function onValueChange(val: any, selectRow?: any): void {
 
 /**
  * 加载下拉字典数据
+ * Task 2.14: 恢复报表字典加载模式（区分报表字典和在线表单字典）
  */
 function loadDropdownData(): void {
   if (props.widget == null || !isDictWidget.value) return
   dictDataList.value = []
   if (form().getDictDataList) {
-    const dictInfo = (props.widget.props?.dictInfo || {}).dict
-    if (dictInfo == null) return
-    const dictCall = getDictDataList(null, dictInfo, form().getDropdownParams(props.widget))
+    let dictCall
+    if (form().pageCode != null) {
+      // 报表字典：直接传入 dictInfo 对象
+      const dictInfo = props.widget.props?.dictInfo
+      dictCall = getDictDataList(null, dictInfo, form().getDropdownParams(props.widget))
+    } else {
+      // 在线表单字典：传入 dictInfo.dict
+      const dictInfo = (props.widget.props?.dictInfo || {}).dict
+      if (dictInfo == null) return
+      dictCall = getDictDataList(null, dictInfo, form().getDropdownParams(props.widget))
+    }
     dictCall.then((res: any[]) => {
       res.forEach((item: any) => {
         item.id = item.id + ''
@@ -334,6 +373,61 @@ defineExpose({ reset })
     <OnlineCustomGroup
       v-if="widget.widgetType === SysCustomWidgetType.CellGroup"
       :widget="widget"
+    />
+
+    <!-- 标签页 -->
+    <OnlineCustomTabs
+      v-if="widget.widgetType === SysCustomWidgetType.Tabs"
+      :widget="widget"
+    />
+
+    <!-- 单选/多选过滤 -->
+    <SelectFilter
+      v-if="widget.widgetType === SysCustomWidgetType.MobileRadioFilter || widget.widgetType === SysCustomWidgetType.MobileCheckBoxFilter"
+      :widget="widget"
+      :data-list="widgetProps.dataList"
+      :label="widget.showName"
+      :multiple="multiSelect"
+      :value="bindValue"
+      @update:value="onValueInput"
+      @change="onValueChange"
+    />
+
+    <!-- 文本过滤 -->
+    <SearchFilter
+      v-if="widget.widgetType === SysCustomWidgetType.MobileInputFilter"
+      :label="widget.showName"
+      :value="bindValue"
+      @update:value="onValueInput"
+      @change="onValueChange"
+    />
+
+    <!-- 开关过滤 -->
+    <SwitchFilter
+      v-if="widget.widgetType === SysCustomWidgetType.MobileSwitchFilter"
+      :label="widget.showName"
+      :value="bindValue"
+      @update:value="onValueInput"
+      @change="onValueChange"
+    />
+
+    <!-- 数字范围过滤 -->
+    <NumberRangeFilter
+      v-if="widget.widgetType === SysCustomWidgetType.MobileNumberRangeFilter"
+      :label="widget.showName"
+      :value="bindValue"
+      @update:value="onValueInput"
+      @change="onValueChange"
+    />
+
+    <!-- 日期范围过滤 -->
+    <DateRangeFilter
+      v-if="widget.widgetType === SysCustomWidgetType.MobileDateRangeFilter"
+      :widget="widget"
+      :label="widget.showName"
+      :value="bindValue"
+      @update:value="onValueInput"
+      @change="onValueChange"
     />
 
     <!-- 只读标签 -->
@@ -525,6 +619,96 @@ defineExpose({ reset })
       :font-bold="widgetProps.fontBold"
       :font-italic="widgetProps.fontItalic"
       :is-html="widget.column?.isRichText"
+    />
+
+    <!-- 关联选择 -->
+    <OnlineRelationSelect
+      v-if="widget.widgetType === SysCustomWidgetType.DataSelect && !form().readOnly"
+      :widget="widget"
+      :label="widget.showName"
+      :required="widget.props?.required"
+      :props="widgetProps.props"
+      :value="bindValue"
+      :disabled="widgetProps.disabled"
+      :placeholder="widgetProps.placeholder"
+      :prop="widget.propString"
+      @update:value="onValueInput"
+      @change="onValueChange"
+    />
+
+    <!-- 用户选择 -->
+    <UserSelect
+      v-if="widget.widgetType === SysCustomWidgetType.UserSelect && !form().readOnly"
+      :widget="widget"
+      :label="widget.showName"
+      :required="widget.props?.required"
+      :value="bindValue"
+      :disabled="widgetProps.disabled"
+      :placeholder="widgetProps.placeholder"
+      :prop="widget.propString"
+      @update:value="onValueInput"
+      @change="onValueChange"
+    />
+
+    <!-- 部门选择 -->
+    <DeptSelect
+      v-if="widget.widgetType === SysCustomWidgetType.DeptSelect && !form().readOnly"
+      :widget="widget"
+      :label="widget.showName"
+      :required="widget.props?.required"
+      :value="bindValue"
+      :disabled="widgetProps.disabled"
+      :placeholder="widgetProps.placeholder"
+      :prop="widget.propString"
+      @update:value="onValueInput"
+      @change="onValueChange"
+    />
+
+    <!-- 签名组件 -->
+    <SignaturePad
+      v-if="widget.widgetType === SysCustomWidgetType.Signature"
+      :label="widget.showName"
+      :value="bindValue"
+      :required="widget.props?.required"
+      :disabled="widgetProps.disabled"
+      :height="widget.props?.height"
+      :background-color="widget.props?.backgroundColor"
+      :pen-color="widget.props?.penColor"
+      :prop="widget.propString"
+      @update:value="onValueInput"
+      @change="onValueChange"
+    />
+
+    <!-- 条形码 -->
+    <FieldBarCode
+      v-if="widget.widgetType === SysCustomWidgetType.BARCODE"
+      :label="widget.showName"
+      :value="bindValue"
+      :text="widget.props?.text"
+    />
+
+    <!-- 二维码 -->
+    <FieldQRcode
+      v-if="widget.widgetType === SysCustomWidgetType.QRCODE"
+      :label="widget.showName"
+      :value="bindValue"
+    />
+
+    <!-- 视频组件 -->
+    <FieldVideo
+      v-if="widget.widgetType === SysCustomWidgetType.Video"
+      :label="widget.showName"
+      :value="bindValue"
+      :required="widget.props?.required"
+      :disabled="widgetProps.disabled"
+      :prop="widget.propString"
+    />
+
+    <!-- 图表组件 -->
+    <OnlineCustomChart
+      v-if="isChart(widget.widgetType)"
+      :widget="widget"
+      :value="bindValue"
     />
   </div>
 </template>

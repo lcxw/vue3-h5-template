@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { validateWidget as validateWidgetUtil } from '@/utils/validate'
 
 /**
  * FieldCheckBox 多选框字段组件
@@ -30,6 +31,8 @@ interface Props {
     value: string
     label: string
   }
+  /** 验证规则 */
+  rules?: unknown[]
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -46,6 +49,7 @@ const props = withDefaults(defineProps<Props>(), {
     value: 'id',
     label: 'name',
   }),
+  rules: undefined,
 })
 
 const emit = defineEmits<{
@@ -54,6 +58,8 @@ const emit = defineEmits<{
 }>()
 
 const dirty = ref(false)
+/** 校验错误信息 */
+const errorMessage = ref('')
 
 /**
  * 计算选中值
@@ -87,10 +93,29 @@ function getDirty() {
   return dirty.value
 }
 
+/**
+ * 校验组件值是否符合规则
+ * @returns Promise，校验失败时 resolve 错误信息字符串
+ */
+function validateWidget(): Promise<string | void> {
+  return new Promise((resolve) => {
+    validateWidgetUtil(props.rules as any[], props.value)
+      .then(() => {
+        errorMessage.value = ''
+        resolve()
+      })
+      .catch((e: string) => {
+        errorMessage.value = e
+        resolve(e)
+      })
+  })
+}
+
 // 暴露方法供父组件调用
 defineExpose({
   setDirty,
   getDirty,
+  validateWidget,
 })
 </script>
 

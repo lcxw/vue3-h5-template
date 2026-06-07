@@ -46,6 +46,7 @@ const {
   showSubPage,
   subFormId,
   editRowData,
+  operationCallback,
   provideFormContext,
 } = useOnlineForm(formConfigRef, { readOnly, flowInfo })
 
@@ -101,6 +102,9 @@ function isWidgetDisabled(widget: any): boolean {
  * @param data - 返回的数据
  */
 function onCloseSubForm(refresh: boolean, data?: any) {
+  if (refresh && operationCallback.value) {
+    operationCallback.value(data)
+  }
   showSubPage.value = false
 }
 

@@ -7,6 +7,7 @@ import { showDialog, showToast } from 'vant'
 import { computed, nextTick, onMounted, provide, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { doUrl } from '@/common/ajax'
+import { FlowOperationController } from '@/api/FlowController/FlowOperationController'
 import { OnlineFormEventType, SysCustomWidgetOperationType, SysOnlineColumnFilterType, SysOnlineFormType, SysOnlineRelationType } from '@/staticDict/index'
 import { TableWidget } from '@/utils/widget'
 import OnlineEditForm from './OnlineEditForm.vue'
@@ -152,11 +153,60 @@ function handlerEditOperation(rowData: any) {
     return
   if ('WFSTATUS' in rowData && rowData.WFSTATUS !== -1) {
     // 流程数据，跳转到流程详情
-    // TODO: 实现流程详情跳转
+    onFlowDetails(rowData)
   }
   else {
     handlerOperation(getOperation(SysCustomWidgetOperationType.EDIT), rowData)
     emit('changeSub')
+  }
+}
+
+/**
+ * 查看流程详情
+ * 根据工单编号查询流程信息，跳转到流程处理页面
+ * @param row - 行数据
+ */
+async function onFlowDetails(row: any) {
+  try {
+    const res: any = await doUrl(
+      '/admin/online/onlineApi/runScript/queryFlowInfoByWorkFlowCode',
+      'post',
+      {
+        scriptCode: 'queryFlowInfoByWorkFlowCode',
+        scriptParam: {
+          workOrderCode: row?.BILLCODE,
+        },
+      },
+    )
+    const processInfo = res[0]
+    const taskRes: any = await FlowOperationController.viewInitialHistoricTaskInfo({
+      processInstanceId: processInfo.PROCESS_INSTANCE_ID,
+    })
+    const data = {
+      isRuntime: false,
+      processDefinitionKey: processInfo.PROCESS_DEFINITION_KEY || null,
+      processInstanceId: processInfo.PROCESS_INSTANCE_ID || null,
+      processDefinitionId: processInfo.PROCESS_DEFINITION_ID || null,
+      formId: taskRes.formId || null,
+      routerName: taskRes.mobileRouterName || taskRes.routerName,
+      readOnly: true,
+      taskId: processInfo.taskId || null,
+      taskName: processInfo.taskName,
+      flowEntryName: processInfo.PROCESS_DEFINITION_NAME || null,
+      processInstanceInitiator: null,
+      flowStatus: row.WFSTATUS,
+      showWorkFlowForm: true,
+    }
+    router.push({
+      name: 'HandleFlowTask',
+      query: {
+        passData: encodeURIComponent(JSON.stringify(data)),
+      },
+    })
+  }
+  catch (e) {
+    console.error('查询流程详情失败', e)
+    showToast('查询流程详情失败')
   }
 }
 

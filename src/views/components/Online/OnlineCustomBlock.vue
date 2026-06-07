@@ -80,12 +80,13 @@ const validWidgetList = computed(() => {
 </script>
 
 <template>
-  <div class="custom-block">
-    <div
+  <!-- 使用 vant 栅格布局，支持 gutter 间距和 span 列宽控制 -->
+  <van-row class="custom-block" :gutter="gutter">
+    <van-col
       v-for="(widget, index) in validWidgetList"
       :key="index + widget.variableName"
       :class="subWidgetClass"
-      class="custom-block-item"
+      :span="widget.props?.span ? widget.props.span / 2 : 24"
     >
       <div :style="{ marginBottom: (widget.props?.paddingBottom ? widget.props.paddingBottom : 0) + 'px' }">
         <OnlineCustomWidget
@@ -95,12 +96,13 @@ const validWidgetList = computed(() => {
           @change="(val: any, detail?: any) => onChange(widget, val, detail)"
         />
       </div>
-    </div>
-  </div>
+    </van-col>
+  </van-row>
 </template>
 
 <style scoped>
-.custom-block-item {
-  width: 100%;
+/* 栅格列间距调整 */
+.custom-block :deep(.van-col) {
+  margin-bottom: 0;
 }
 </style>

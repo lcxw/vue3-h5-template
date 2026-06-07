@@ -59,6 +59,7 @@ const {
   provideFormContext,
   richEditWidgetList,
   tableWidgetList,
+  operationCallback,
   doUrl,
 } = useOnlineForm(formConfigRef, { readOnly, isEdit, masterTableData })
 
@@ -341,6 +342,9 @@ function onStartFlowImpl(processDefinitionKey: string, taskVariableList: any[], 
  * @param data - 返回的数据
  */
 function onCloseSubForm(refresh: boolean, data?: any) {
+  if (refresh && operationCallback.value) {
+    operationCallback.value(data)
+  }
   showSubPage.value = false
   if (refresh) {
     date.value = Date.now()

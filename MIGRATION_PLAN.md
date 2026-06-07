@@ -2,491 +2,290 @@
 
 ## Context
 
-项目从 uniapp (Vue 2 + uview-ui) 迁移至 Vite + Vue 3 + VITE H5。迁移后在线表单、流程审批等核心业务功能无法正常使用。本计划旨在系统性地排查并修复所有迁移遗留问题，确保H5端功能完整可用。
+项目从 uniapp (Vue 2 + uview-ui) 迁移至 Vite + Vue 3 + Vant H5。迁移后在线表单、流程审批等核心业务功能无法正常使用。本计划记录了详细的差异分析结果和修复待办事项。
+
+## 已完成的分析
+
+- [x] 两个项目目录结构对比
+- [x] 核心基础设施（请求封装、工具函数）对比
+- [x] 在线表单模块对比
+- [x] 流程审批模块对比
+- [x] Online 业务组件和字段组件对比
+- [x] 静态字典对比（81个字典全部一致）
+- [x] API 层对比（36个 Controller 全部一致）
 
 ---
 
-## 一、项目技术栈对比
+## Phase 1: 基础设施修复 [P0]
 
-### 原始项目 (C:\Users\wang\githome\node\vue\p2506-si-forms-fe-mobile)
-- **框架**: uniapp + Vue 2 (Options API)
-- **UI组件库**: uview-ui
-- **API调用**: uni API (uni.navigateTo, uni.showToast等)
-- **状态管理**: Vuex / 全局变量
-- **构建工具**: Webpack (vue.config.js)
-- **路由**: pages.json 配置
-- **混入**: mixins (flowMixins.js, onlineFormMixins.js)
-- **语言**: JavaScript
+### Task 1.1: 恢复 JSONbig BigInt 处理
+- **问题**: `src/utils/http/index.ts` 中完全移除了 JSON BigInt 处理，后端返回 Long 类型 ID（雪花算法）会导致精度丢失
+- **原始实现**: `common/request.js` 第53-64行，使用 `JSONbig({ storeAsString: true })` 解析响应
+- **修复方案**: 在 `src/utils/http/index.ts` 的 axios 实例中添加 `transformResponse` 使用已有的 `src/utils/jsonBigint/` 模块
+- **状态**: [x] 已修复 (commit 4ef7242)
 
-### 迁移后项目 (c:\Users\wang\githome\node\vue\vue3-h5-template)
-- **框架**: Vue 3 (Composition API + Options API混合)
-- **UI组件库**: vant
-- **API调用**: axios
-- **状态管理**: Vue 3 reactive/ref
-- **构建工具**: Vite 8.0.16
-- **路由**: Vue Router 4 (hash模式)
-- **组合式函数**: composables (useFlow.ts替代flowMixins)
-- **语言**: TypeScript
+### Task 1.2: 恢复 showMessage 的 icon 类型支持
+- **问题**: `src/utils/index.ts` 中 `showMessage` 函数忽略了 `_type` 参数，原始支持 success/error/none 图标
+- **修复方案**: 使用 vant 的 `showSuccessToast`/`showFailToast` 根据类型显示不同图标
+- **状态**: [x] 已修复 (commit 4ef7242)
+
+### Task 1.3: 恢复 _skipAuthRedirect 配置支持
+- **问题**: `src/utils/http/index.ts` 移除了 `_skipAuthRedirect` 配置，部分页面（setting.vue, my/index.vue）仍在引用
+- **修复方案**: 在请求拦截器中检查 `config._skipAuthRedirect`，支持跳过 401 自动重定向
+- **状态**: [x] 已修复 (commit 4ef7242)
 
 ---
 
-## 三、执行任务清单
+## Phase 2: 在线表单核心修复 [P0]
 
-### Task 1: 核心基础设施检查
-**目标**: 确保项目基础架构正确运行
+### Task 2.1: 修复 useOnlineForm 中 batchDelete/deleteRow 的 queryTable 获取方式
+- **问题**: `(builtFormConfig.value as any).queryTable?.table` 取不到值，queryTable 是组件 computed 不在 formConfig 中
+- **原始实现**: `this.queryTable.table`（通过组件 computed 访问）
+- **修复方案**: 将 queryTable 通过参数传入或使用 provide/inject
+- **文件**: `src/views/online/useOnlineForm.ts`
+- **状态**: [ ] 待修复
 
-  - 验证所有uni API到Axios API的映射
-  - 重点检查: navigateTo, showToast, showModal, navigateBack, getStorageSync/setStorageSync
+### Task 2.2: 修复 onCloseSubForm 未调用 operationCallback
+- **问题**: OnlineEditForm 和 OnlineWorkflowForm 的 onCloseSubForm 未调用 operationCallback，子表单操作结果无法回传
+- **修复方案**: 在 onCloseSubForm 中调用 operationCallback(data)
+- **文件**: `src/views/online/OnlineEditForm.vue`, `src/views/online/OnlineWorkflowForm.vue`
+- **状态**: [ ] 待修复
 
-- [ ] 1.2 检查 `src/common/request.ts` 和 `src/common/ajax.ts`
-  - 对比原始项目的请求封装
-  - 验证API请求路径、拦截器、错误处理
-  - 文件: `src/common/request.ts`, `src/common/ajax.ts`
+### Task 2.3: 修复 initWidgetRule 未调用 formRef.setRules
+- **问题**: 仅用 `Object.assign(rules, rulesObj)` 赋值，未调用 form ref 的 setRules，表单校验规则可能不生效
+- **原始实现**: `this.$refs.form.setRules(this.rules)` + setTimeout(200ms)
+- **修复方案**: 在 initWidgetRule 中获取 form ref 并调用 setRules
+- **文件**: `src/views/online/useOnlineForm.ts`
+- **状态**: [ ] 待修复
 
-- [ ] 1.3 检查静态字典 `src/staticDict/`
-  - 对比原始项目的静态字典定义
-  - 验证: flowStaticDict.ts, onlineStaticDict.ts, reportStaticDict.ts
-  - 文件: `src/staticDict/*.ts`
+### Task 2.4: 补全 buildEventContext 缺失的方法
+- **问题**: `buildEventContext` 未提供 `doUrl`、`router` 等，自定义事件脚本可能报错
+- **原始实现**: 事件函数通过 `.bind(this)` 可访问完整 Vue 实例（含 doUrl、$refs、$router 等）
+- **修复方案**: 在 buildEventContext 中补充 doUrl、router 等方法
+- **文件**: `src/views/online/useOnlineForm.ts`
+- **状态**: [ ] 待修复
 
-- [ ] 1.4 检查 `src/App.vue` 和入口文件
-  - 验证应用初始化逻辑
-  - 检查全局配置、路由守卫
-  - 文件: `src/App.vue`, `src/app.ts`
+### Task 2.5: 修复 OnlineCustomBlock 栅格布局
+- **问题**: 原始使用 `u-row`/`u-col` 栅格系统支持 `span` 列宽，迁移后改为简单 div 布局，所有组件全宽显示
+- **修复方案**: 使用 vant 的 `van-row`/`van-col` 或 CSS Grid 实现栅格布局
+- **文件**: `src/views/components/Online/OnlineCustomBlock.vue`
+- **状态**: [ ] 待修复
 
-**验证方法**: 运行 `npm run dev`，检查控制台无报错，能正常访问登录页
+### Task 2.6: 补全 OnlineCustomWidget 缺失的约15种组件类型渲染分支
+- **缺失组件类型**:
+  - `Tabs` → 需要 OnlineCustomTabs
+  - `DataSelect` → 需要 OnlineRelationSelect
+  - `UserSelect` → 需要 UserSelect 集成
+  - `DeptSelect` → 需要 DeptSelect 集成
+  - `Signature` → 需要 SignaturePad 集成
+  - `BARCODE` → 已有 FieldBarCode，需接入
+  - `QRCODE` → 已有 FieldQRcode，需接入
+  - `Video` → 已有 FieldVideo，需接入
+  - `MAP` → 暂不需要（H5 不需要小程序地图）
+  - `MobileRadioFilter` / `MobileCheckBoxFilter` → 需要 SelectFilter
+  - `MobileInputFilter` → 需要 SearchFilter
+  - `MobileSwitchFilter` → 需要 SwitchFilter
+  - `MobileNumberRangeFilter` → 需要 NumberRangeFilter
+  - `MobileDateRangeFilter` → 需要 DateRangeFilter
+  - 图表类型 (isChart) → 需要 OnlineCustomChart
+- **修复方案**: 在 OnlineCustomWidget 模板中逐个添加条件分支，引用已有或新建的组件
+- **文件**: `src/views/components/Online/OnlineCustomWidget.vue`
+- **状态**: [ ] 待修复
 
----
+### Task 2.7: 新建 OnlineCustomFilterBox 筛选组件
+- **问题**: 列表页筛选功能完全缺失
+- **原始功能**: 支持排序和筛选，底部弹出式筛选面板，含"重置"和"确定"按钮，emit refresh/reset 事件
+- **修复方案**: 基于 vant 的 `van-popup` + `van-cell` 新建筛选组件
+- **文件**: 新建 `src/views/components/Online/OnlineCustomFilterBox.vue`
+- **状态**: [ ] 待修复
 
-### Task 2: 登录模块修复
-**目标**: 确保用户能正常登录并获取用户信息
+### Task 2.8: 新建 OnlineCustomTabs 标签页组件
+- **问题**: 标签页分组渲染功能缺失
+- **原始功能**: 使用 `u-tabs` 渲染多标签切换，每个 tab 下渲染 OnlineCustomBlock
+- **修复方案**: 使用 vant 的 `van-tabs` + `van-tab` 实现
+- **文件**: 新建 `src/views/components/Online/OnlineCustomTabs.vue`
+- **状态**: [ ] 待修复
 
-- [ ] 2.1 检查登录页面组件
-  - 对比原始: `pages/login/index.vue`, `pages/login/password.vue`
-  - 检查迁移后: `src/pages/login/index.vue`, `src/pages/login/password.vue`
-  - 验证表单验证、API调用、跳转逻辑
+### Task 2.9: 新建 OnlineRelationSelect 关联选择组件
+- **问题**: 关联表选择功能完全缺失
+- **原始功能**: 弹出 OnlineForm 进行关联数据选择，支持单选/多选，自动加载关联数据并显示
+- **修复方案**: 基于 `van-popup` + `OnlineQueryForm` 新建组件
+- **文件**: 新建 `src/views/components/Online/OnlineRelationSelect.vue`
+- **状态**: [ ] 待修复
 
-- [ ] 2.2 检查SSO登录
-  - 对比原始: `ssoLogin.vue` (项目根目录)
-  - 检查迁移后: `src/pages/login/ssoLogin.vue`
-  - 验证URL参数解析、token处理
+### Task 2.10: 新建 OnlineCustomChart 图表组件
+- **问题**: 在线表单中的图表功能缺失
+- **原始功能**: 支持11种图表类型，集成 ReportDatasetController 数据加载
+- **修复方案**: 基于已有的 `src/views/components/Charts/` 组件封装
+- **文件**: 新建 `src/views/components/Online/OnlineCustomChart.vue`
+- **状态**: [ ] 待修复
 
-- [ ] 2.3 验证登录状态管理
-  - 检查token存储 (localStorage/sessionStorage)
-  - 检查用户信息存储和获取
-  - 验证路由守卫 (未登录跳转)
+### Task 2.11: 新建 OnlineImageCard 图片卡片组件
+- **问题**: 关联选择卡片展示简化
+- **原始功能**: 支持左右图片布局、字典值显示、选择功能（checkbox），内嵌 OnlineCustomImage 和 OnlineCustomBlock
+- **修复方案**: 基于 vant 的 `van-card` + `van-checkbox` 新建
+- **文件**: 新建 `src/views/components/Online/OnlineImageCard.vue`
+- **状态**: [ ] 待修复
 
-**验证方法**:
-1. 启动开发服务器
-2. 访问登录页，输入用户名密码
-3. 验证能成功登录并跳转到首页
-4. 检查localStorage中是否正确存储token和userInfo
+### Task 2.12: 修复 OnlineCustomList 增删改操作
+- **问题**: `onAddClick`/`onEditClick`/`onDeleteClick` 仅有 console.log，实际业务逻辑未实现
+- **缺失内容**: `form().handlerOperation` 调用、级联数据处理 (`__cascade_add_id__`)、权限校验 (`checkOperationVisible`)、删除确认弹窗、数据变更回调 (`AFTER_LOAD_TABLE_DATA`)
+- **修复方案**: 完整实现增删改操作逻辑
+- **文件**: `src/views/components/Online/OnlineCustomList.vue`
+- **状态**: [ ] 待修复
 
----
+### Task 2.13: 修复 OnlineQueryForm 流程详情跳转
+- **问题**: `onFlowDetails` 方法为 TODO 注释
+- **修复方案**: 实现 flowDetails 跳转到流程详情页
+- **文件**: `src/views/online/OnlineQueryForm.vue`
+- **状态**: [ ] 待修复
 
-### Task 3: 首页功能修复
-**目标**: 首页能正确加载菜单和入口配置
+### Task 2.14: 修复 OnlineCustomWidget 字典加载丢失报表字典模式
+- **问题**: 仅保留在线表单字典模式，报表字典模式丢失
+- **原始实现**: 区分报表字典和在线表单字典两种模式
+- **修复方案**: 恢复报表字典加载逻辑
+- **文件**: `src/views/components/Online/OnlineCustomWidget.vue`
+- **状态**: [ ] 待修复
 
-- [ ] 3.1 检查首页组件
-  - 对比原始: `pages/home/index.vue`
-  - 检查迁移后: `src/pages/home/index.vue`
-  - 验证组件替换: u-grid → nut-grid, u-image → nut-image
+### Task 2.15: 恢复字段组件的 validateWidget 方法
+- **问题**: 所有字段组件（Field*.vue）的 `validateWidget` 方法被移除
+- **修复方案**: 在各字段组件中恢复 validateWidget 方法
+- **文件**: `src/views/components/Field*.vue`（所有字段组件）
+- **状态**: [ ] 待修复
 
-- [ ] 3.2 验证菜单加载逻辑
-  - 检查从localStorage读取 `setHomeEntryList`
-  - 验证 `jumpTo` 方法的菜单跳转逻辑
-  - 检查 `SysMenuBindType` 字典引用
-
-- [ ] 3.3 验证待办任务计数
-  - 检查 `FlowOperationController.countRuntimeTask` 调用
-  - 验证API响应处理
-
-**验证方法**:
-1. 登录后查看首页
-2. 验证菜单分组和图标显示
-3. 点击菜单项，验证能正确跳转到对应页面
-
----
-
-### Task 4: 在线表单模块修复 (核心)
-**目标**: 在线表单能正常展示、查询、编辑、提交
-
-#### 4.1 表单入口页面
-- [ ] 对比原始: `views/online/form.vue`
-- [ ] 检查迁移后: `src/views/online/form.vue`
-- [ ] 验证URL参数解析 (formId, entryId)
-- [ ] 验证子页面切换逻辑
-
-#### 4.2 表单Mixins迁移验证
-- [ ] 对比原始: `views/online/onlineFormMixins.js` (876行)
-- [ ] 检查迁移后: `src/views/online/onlineFormMixins.ts`
-- [ ] **重点检查**:
-  - `buildFormConfig` 方法 (构建表单配置)
-  - `getWidgetValue` / `onValueChange` (组件值获取和变更)
-  - `initFormWidgetList` / `initWidget` (组件初始化)
-  - `buildWidgetRule` (表单验证规则)
-  - `initPage` (页面初始化)
-  - `handlerOperation` (操作处理)
-
-#### 4.3 表单组件检查
-- [ ] 检查 `src/views/components/Online/` 目录下所有组件
-- [ ] 验证组件替换: uview → vant
-- [ ] 重点组件:
-  - OnlineCustomWidget.vue (核心组件渲染)
-  - OnlineCustomList.vue (列表组件)
-  - OnlineCustomUpload.vue (上传组件)
-  - OnlineRelationSelect.vue (关联选择)
-
-#### 4.4 表单字段组件
-- [ ] 检查 `src/views/components/Field*.vue` 所有字段组件
-- [ ] 验证每种字段类型: Input, Select, Radio, CheckBox, Cascader, Upload等
-- [ ] 确保vant组件正确使用
-
-#### 4.5 表单类型支持
-- [ ] OnlineQueryForm.vue (查询表单)
-- [ ] OnlineEditForm.vue (编辑表单)
-- [ ] OnlineWorkflowForm.vue (工作流表单)
-- [ ] OnlineWorkOrderForm.vue (工单表单)
-- [ ] OnlineOneToOneQueryForm.vue (一对一查询表单)
-
-#### 4.6 在线表单工具函数
-- [ ] 对比原始: `views/online/utils.js`
-- [ ] 检查迁移后: `src/views/online/utils.ts`
-- [ ] 验证 `getDictDataList` 等工具函数
-
-**验证方法**:
-1. 从首页点击在线表单菜单
-2. 验证表单列表页能加载
-3. 点击查看详情，验证表单渲染
-4. 测试表单提交、验证规则
-5. 测试各种字段类型交互
+### Task 2.16: 修复 OnlineCustomWidget 缺少 parentWidget 注入
+- **问题**: 原始项目通过 inject `parentWidget` 实现父子组件通信，迁移后移除
+- **修复方案**: 恢复 parentWidget 的 provide/inject
+- **文件**: `src/views/components/Online/OnlineCustomWidget.vue`
+- **状态**: [ ] 待修复
 
 ---
 
-### Task 5: 流程审批模块修复 (核心)
-**目标**: 流程任务列表、审批处理、表单联动正常
+## Phase 3: 流程审批模块修复 [P0]
 
-#### 5.1 我的待办任务
-- [ ] 对比原始: `views/workflow/formRuntimeTask/formMyTask.vue`
-- [ ] 检查迁移后: `src/views/workflow/formRuntimeTask/formMyTask.vue`
-- [ ] 验证任务列表加载、分页、筛选
-- [ ] 验证点击进入任务详情
+### Task 3.1: 修复 editCopyForItem 用户列表未实现
+- **问题**: `filteredUserList` computed 直接返回空数组 `[]`，无法选择抄送用户
+- **原始实现**: 通过 `CustomSelectPanel` 组件配合 `loadSysUserData` 方法实现分页加载
+- **修复方案**: 实现用户数据加载和列表展示
+- **文件**: `src/views/workflow/components/copyForSelect/editCopyForItem.vue`
+- **状态**: [ ] 待修复
 
-#### 5.2 已办任务 / 历史任务
-- [ ] 检查 `formMyApprovedTask.vue` (已办)
-- [ ] 检查 `formMyHistoryTask.vue` (历史)
-- [ ] 验证API调用和数据展示
+### Task 3.2: 修复 editCopyForItem 部门级联选择降级
+- **问题**: 原始使用 `CustomCascaderPanel` 实现部门树级联选择，迁移后降级为扁平列表
+- **修复方案**: 利用已有的 `CustomCascaderPanel` 组件实现部门树级联选择
+- **文件**: `src/views/workflow/components/copyForSelect/editCopyForItem.vue`
+- **状态**: [ ] 待修复
 
-#### 5.3 流程处理页面 (关键)
-- [ ] 对比原始: `views/workflow/handleFlowTask/index.vue` (966行)
-- [ ] 检查迁移后: `src/views/workflow/handleFlowTask/index.vue` (876行)
-- [ ] **重点差异分析**:
-  - 原始使用 `mixins: [flowMixins]`
-  - 迁移后使用 `useFlow()` composables
-  - 验证所有mixin方法已正确转换为composables
+### Task 3.3: 修复 editCopyForItem 部门岗位(deptPost)选择缺失
+- **问题**: deptPost 类型的级联选择完全缺失
+- **原始实现**: 有 `deptPostTree` computed 构建部门-岗位级联树
+- **修复方案**: 实现 deptPostTree 计算和级联选择 UI
+- **文件**: `src/views/workflow/components/copyForSelect/editCopyForItem.vue`
+- **状态**: [ ] 待修复
 
-#### 5.4 useFlow组合式函数
-- [ ] 对比原始: `views/workflow/mixins/flowMixins.js` (114行)
-- [ ] 检查迁移后: `src/views/workflow/composables/useFlow.ts` (228行)
-- [ ] 验证方法映射:
-  - `submitConsign` (加签/减签)
-  - `preHandlerOperation` (审批预处理)
-  - `handlerClose` (关闭页面)
-  - `initFormData` (初始化表单)
-  - `startImpl` (启动流程)
-  - `submitImpl` (提交流程)
+### Task 3.4: 修复 editCopyForItem 搜索功能为空实现
+- **问题**: `onSearch` 方法为空
+- **修复方案**: 实现搜索时重载数据逻辑
+- **文件**: `src/views/workflow/components/copyForSelect/editCopyForItem.vue`
+- **状态**: [ ] 待修复
 
-#### 5.5 流程组件检查
-- [ ] taskCard.vue (任务卡片)
-- [ ] taskCommentList.vue (审批记录)
-- [ ] taskCommit.vue (审批提交弹窗)
-- [ ] copyForSelect/ (抄送人选择)
+### Task 3.5: 修复 taskCommit SET_ASSIGNEE 初始化缺失
+- **问题**: SET_ASSIGNEE 操作时 `otherFilterObject` 初始化逻辑完全缺失
+- **原始实现**: mounted 中处理 multiSignAssignee 的 assigneeType 和 assigneeList
+- **修复方案**: 在 onMounted 中恢复 SET_ASSIGNEE 的初始化逻辑
+- **文件**: `src/views/workflow/components/taskCommit.vue`
+- **状态**: [ ] 待修复
 
-#### 5.6 流程API控制器
-- [ ] 检查 `src/api/FlowController/` 所有控制器
-- [ ] 验证:
-  - FlowOperationController.ts (流程操作)
-  - FlowEntryController.ts (流程入口)
-  - FlowCategoryController.ts (流程分类)
+### Task 3.6: 修复 taskCommit multiSelect 计算属性缺失
+- **问题**: 用户选择组件没有传递 `multiple` 相关参数
+- **原始实现**: 有 `multiSelect` 计算属性判断是否多选
+- **修复方案**: 恢复 multiSelect 计算属性并传递给 UserSelect 组件
+- **文件**: `src/views/workflow/components/taskCommit.vue`
+- **状态**: [ ] 待修复
 
-**验证方法**:
-1. 访问"消息"tab (待办任务)
-2. 验证任务列表加载
-3. 点击任务进入审批页
-4. 验证表单展示、审批记录
-5. 测试审批操作 (同意、拒绝、加签等)
-6. 验证审批成功后返回列表
+### Task 3.7: 修复 handleFlowTask getButtonType 缺失类型映射
+- **问题**: 缺少 `PARALLEL_REFUSE`（并行拒绝）和 `MULTI_REFUSE`（多实例拒绝）类型映射
+- **修复方案**: 在 getButtonType 中补充这两种类型的映射
+- **文件**: `src/views/workflow/handleFlowTask/index.vue`
+- **状态**: [ ] 待修复
 
----
+### Task 3.8: 修复 handleFlowTask getMasterData 未传递 variableList
+- **问题**: `getMasterData` 未传递 `variableList` 参数给表单组件
+- **修复方案**: 从 taskDetailsData 中获取 variableList 并传递
+- **文件**: `src/views/workflow/handleFlowTask/index.vue`
+- **状态**: [ ] 待修复
 
-### Task 6: 报表模块修复
-**目标**: 报表页面能正常展示图表
-
-- [ ] 6.1 检查报表入口
-  - 对比原始: `views/report/index.vue`
-  - 检查迁移后: `src/views/report/index.vue`
-
-- [ ] 6.2 检查报表表单
-  - 对比原始: `views/report/reportForm.vue`
-  - 检查迁移后: `src/views/report/reportForm.vue`
-
-- [ ] 6.3 检查图表组件
-  - 对比原始: `views/components/Charts/` 和 `Charts3.0/`
-  - 检查迁移后: `src/views/components/Charts/` 和 `Charts3.0/`
-  - 验证ECharts集成
-
-- [ ] 6.4 检查报表API
-  - 验证 `src/api/ReportController/` 所有控制器
-  - 检查数据加载和渲染
-
-**验证方法**:
-1. 从首页点击报表菜单
-2. 验证报表页面加载
-3. 验证图表渲染
+### Task 3.9: 修复 copyForSelect 删除行为不一致
+- **问题**: 原始删除类型时设为 `undefined`，迁移后设为空数组 `[]`，导致空的分组行被显示
+- **修复方案**: 改为设为 undefined 或在 computed 中过滤空数组
+- **文件**: `src/views/workflow/components/copyForSelect/index.vue`
+- **状态**: [ ] 待修复
 
 ---
 
-### Task 7: 公共组件和工具验证
-**目标**: 确保所有公共组件正常工作
+## Phase 4: 公共组件补全 [P1]
 
-#### 7.1 基础组件
-- [ ] BasePage.vue (页面容器)
-- [ ] BaseFilter.vue (筛选器)
-- [ ] CustomList.vue (自定义列表)
-- [ ] CustomImage.vue (图片组件)
-- [ ] CustomText.vue (文本组件)
-- [ ] FilterBox.vue (筛选框)
-- [ ] SearchFilter.vue (搜索筛选)
+### Task 4.1: 补全 CustomCascaderPanelPopup 组件
+- **问题**: 原始项目有 `CustomCascaderPanelPopup`（级联面板弹窗），迁移后缺失
+- **修复方案**: 基于 `CustomCascaderPanel` + `van-popup` 新建
+- **文件**: 新建 `src/views/components/CustomCascaderPanelPopup/index.vue`
+- **状态**: [ ] 待修复
 
-#### 7.2 弹出组件
-- [ ] CustomPopup/index.vue
-- [ ] CustomSelectPanel/index.vue
-- [ ] CustomCascaderPanel/index.vue
-- [ ] CustomCascaderPanelPopup/index.vue
-- [ ] SelectPopup/index.vue
-
-#### 7.3 选择组件
-- [ ] DeptSelect/ (部门选择)
-- [ ] UserSelect/ (用户选择)
-- [ ] SignaturePad/ (签名板)
-
-#### 7.4 工具函数
-- [ ] `src/utils/index.ts` (主工具函数)
-- [ ] `src/utils/validate.ts` (表单验证)
-- [ ] `src/utils/widget.ts` (组件工具)
-- [ ] `src/utils/onlineEvent.ts` (在线表单事件)
-- [ ] `src/utils/signature.ts` (签名工具)
-- [ ] `src/utils/constant.ts` (常量定义)
+### Task 4.2: 补全图表组件体系
+- **问题**: 原始项目有两套图表（Charts 旧版 + Charts3.0 基于 ECharts），迁移后 Charts 目录下有部分组件但可能不完整
+- **修复方案**: 检查并补全缺失的图表组件（dataCard, dataProgressCard, progressBar, progressCircle, carouselChart 等）
+- **文件**: `src/views/components/Charts/`
+- **状态**: [ ] 待修复
 
 ---
 
-### Task 8: 页面模块验证
-**目标**: 确保所有页面正常工作
+## Phase 5: 表单组件细节修复 [P2]
 
-- [ ] 8.1 我的页面
-  - `src/pages/my/index.vue`
-  - `src/pages/my/setting.vue`
-  - `src/pages/my/info.vue`
+### Task 5.1: 修复 OnlineWorkOrderForm 直接 URL 调用绕过 Controller
+- **问题**: 使用 `doUrl('/admin/flow/...')` 直接调用，绕过了 Controller 封装
+- **修复方案**: 改用 FlowOperationController 和 FlowEntryController 的方法
+- **文件**: `src/views/online/OnlineWorkOrderForm.vue`
+- **状态**: [ ] 待修复
 
-- [ ] 8.2 自定义页面
-  - `src/pages/custom/handleOATask.vue`
-  - `src/pages/custom/viewOATask.vue`
+### Task 5.2: 修复 OnlineOneToOneQueryForm sortList 未做字段映射
+- **问题**: `sortList` computed 直接返回 `orderList`，未做 fieldName 字段映射
+- **修复方案**: 添加字段映射逻辑
+- **文件**: `src/views/online/OnlineOneToOneQueryForm.vue`
+- **状态**: [ ] 待修复
 
-- [ ] 8.3 预览页面
-  - `src/pages/preview/onlineoffice.vue`
+### Task 5.3: 修复 form.vue 缺少 toggleDelete 方法
+- **问题**: 入口页删除模式切换功能缺失
+- **修复方案**: 添加 toggleDelete 方法
+- **文件**: `src/views/online/form.vue`
+- **状态**: [ ] 待修复
 
-- [ ] 8.4 TabBar组件
-  - 检查 `src/components/CustomTabBar.vue`
-  - 验证tab切换功能
-
----
-
-### Task 9: API层完整性验证
-**目标**: 确保所有API接口正确迁移
-
-#### 9.1 通用控制器
-- [ ] CommonPhrasesController.ts
-- [ ] DictionaryController.ts
-- [ ] SysCommonBizController.ts
-- [ ] SysConfController.ts
-- [ ] SysDataPermController.ts
-- [ ] SysDeptController.ts
-- [ ] SysGlobalDictController.ts
-- [ ] SysPostController.ts
-- [ ] SystemController.ts
-- [ ] SysUserController.ts
-
-#### 9.2 在线表单控制器
-- [ ] OnlineColumnController.ts
-- [ ] OnlineDatasourceController.ts
-- [ ] OnlineDatasourceRelationController.ts
-- [ ] OnlineDblinkController.ts
-- [ ] OnlineDictController.ts
-- [ ] OnlineFormController.ts
-- [ ] OnlineOperation.ts
-- [ ] OnlinePageController.ts
-- [ ] OnlineRuleController.ts
-- [ ] OnlineVirtualColumnController.ts
-
-#### 9.3 流程控制器
-- [ ] FlowCategoryController.ts
-- [ ] FlowDictionaryController.ts
-- [ ] FlowEntryController.ts
-- [ ] FlowEntryVariableController.ts
-- [ ] FlowOperationController.ts
-
-#### 9.4 报表控制器
-- [ ] ReportDatasetColumnController.ts
-- [ ] ReportDatasetController.ts
-- [ ] ReportDatasetGroupController.ts
-- [ ] ReportDatasetRelationController.ts
-- [ ] ReportDblinkController.ts
-- [ ] ReportDictController.ts
-- [ ] ReportOperationController.ts
-- [ ] ReportPageController.ts
-- [ ] ReportPageGroupController.ts
-- [ ] ReportPrintController.ts
-- [ ] ReportPrintGroupController.ts
-
-**验证方法**: 对每个API控制器，检查其导出方法是否与原始项目一致
+### Task 5.4: 修复 OnlineFieldLabel 不支持富文本
+- **问题**: 原始使用 `u-parse`（HTML 富文本解析），迁移后仅使用 `van-field`（纯文本）
+- **修复方案**: 对包含 HTML 的内容使用 `v-html` 渲染
+- **文件**: `src/views/components/Online/OnlineFieldLabel.vue`
+- **状态**: [ ] 待修复
 
 ---
 
-### Task 10: 构建和生产环境验证
-**目标**: 确保项目能正常构建和部署
+## 已验证无问题的模块
 
-- [ ] 10.1 开发环境
-  - 运行 `npm run dev`
-  - 验证无编译错误
-  - 验证HMR热更新正常
-
-- [ ] 10.2 生产构建
-  - 运行 `npm run build`
-  - 验证构建成功
-  - 检查dist目录结构
-
-- [ ] 10.3 环境变量
-  - 检查 `.env.development`
-  - 检查 `.env.production`
-  - 验证API代理配置
-
-- [ ] 10.4 Vite配置
-  - 检查 `vite.config.ts`
-  - 验证alias配置 (@ 指向 src)
-  - 验证static文件服务
-  - 验证vant组件自动导入
+- [x] API 层: 36个 Controller 完全一致，无遗漏
+- [x] 静态字典: 81个字典全部迁移，值内容一致
+- [x] Token 管理逻辑: 完整迁移
+- [x] 审批记录展示 (taskCommentList): 功能完整等价
+- [x] 任务卡片 (taskCard): 功能完整等价
+- [x] 已办任务/历史任务列表: 基本完整
+- [x] 核心工具函数: 全部迁移
 
 ---
 
-## 四、关键风险点和注意事项
+## 修复进度统计
 
-### 高风险项
-1. **onlineFormMixins.ts**: 876行的复杂逻辑，迁移过程中容易遗漏或出错
-2. **useFlow.ts**: 流程核心逻辑，替代了flowMixins，需确保所有方法正确实现
-3. **表单动态渲染**: 在线表单的核心，组件类型多、逻辑复杂
-
-### 中风险项
-5. **组件库替换**: uview → vant，部分组件API可能不一致
-6. **Vue 2 → Vue 3**: Options API → Composition API，响应式系统变化
-7. **路由系统**: pages.json → Vue Router，页面生命周期不同
-
-### 低风险项
-8. **静态资源**: 图片、字体等
-9. **样式文件**: CSS/Less可能需要微调
-10. **TypeScript类型**: 类型定义可能不完整但不影响运行
-
----
-
-## 五、验证检查清单
-
-每个模块完成后，执行以下验证:
-
-### 基础验证
-- [ ] 页面能正常加载，无白屏
-- [ ] 控制台无JavaScript错误
-- [ ] 网络请求正常，无404/500错误
-
-### 功能验证
-- [ ] 页面交互正常 (点击、输入、选择)
-- [ ] 数据正确展示
-- [ ] 表单提交成功
-- [ ] 页面跳转正常
-
-### 边界验证
-- [ ] 空数据处理正确
-- [ ] 错误提示友好
-- [ ] 加载状态显示正常
-
----
-
-## 六、执行顺序建议
-
-```
-Phase 1: 基础设施 (Task 1)
-    ↓
-Phase 2: 登录模块 (Task 2)
-    ↓
-Phase 3: 首页功能 (Task 3)
-    ↓
-Phase 4: 在线表单 (Task 4) ← 核心
-    ↓
-Phase 5: 流程审批 (Task 5) ← 核心
-    ↓
-Phase 6: 报表模块 (Task 6)
-    ↓
-Phase 7: 公共组件 (Task 7)
-    ↓
-Phase 8: 页面模块 (Task 8)
-    ↓
-Phase 9: API验证 (Task 9)
-    ↓
-Phase 10: 构建验证 (Task 10)
-```
-
-**预计总工作量**: 10个阶段，每个阶段1-3小时不等
-
----
-
-## 七、常用对比命令
-
-```powershell
-# 对比两个项目的文件数量
-Get-ChildItem -Recurse -File "原始路径" | Measure-Object
-Get-ChildItem -Recurse -File "迁移路径" | Measure-Object
-
-# 查看具体文件内容对比
-fc "原始文件" "迁移文件"
-
-# 检查编译错误
-npm run dev
-# 观察控制台输出
-```
-
----
-
-## 八、关键文件路径索引
-
-### 核心文件
-- 入口: `src/App.vue`, `src/app.ts`
-- 路由: `src/router/index.ts`
-- 请求封装: `src/common/request.ts`, `src/common/ajax.ts`
-
-### 在线表单核心
-- Mixins: `src/views/online/onlineFormMixins.ts`
-- 表单入口: `src/views/online/form.vue`
-- 查询表单: `src/views/online/OnlineQueryForm.vue`
-- 编辑表单: `src/views/online/OnlineEditForm.vue`
-- 工作流表单: `src/views/online/OnlineWorkflowForm.vue`
-- 工具函数: `src/views/online/utils.ts`
-
-### 流程审批核心
-- Mixins替代: `src/views/workflow/composables/useFlow.ts`
-- 任务列表: `src/views/workflow/formRuntimeTask/formMyTask.vue`
-- 审批处理: `src/views/workflow/handleFlowTask/index.vue`
-- 审批提交: `src/views/workflow/components/taskCommit.vue`
-- 审批记录: `src/views/workflow/components/taskCommentList.vue`
-
-### 静态字典
-- 流程字典: `src/staticDict/flowStaticDict.ts`
-- 在线表单字典: `src/staticDict/onlineStaticDict.ts`
-- 报表字典: `src/staticDict/reportStaticDict.ts`
-- 基础字典: `src/staticDict/DictionaryBase.ts`
+| Phase | 总任务数 | 已完成 | 进度 |
+|-------|---------|--------|------|
+| Phase 1: 基础设施 | 3 | 3 | 100% |
+| Phase 2: 在线表单 | 16 | 0 | 0% |
+| Phase 3: 流程审批 | 9 | 0 | 0% |
+| Phase 4: 公共组件 | 2 | 0 | 0% |
+| Phase 5: 细节修复 | 4 | 0 | 0% |
+| **合计** | **34** | **0** | **0%** |

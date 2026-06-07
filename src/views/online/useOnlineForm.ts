@@ -6,8 +6,9 @@ import { showDialog, showToast } from 'vant'
  * 提供表单配置构建、数据管理、组件初始化等功能
  */
 import { computed, provide, reactive, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import router from '@/router'
 import { doUrl } from '@/common/ajax'
+import { showConfirm } from '@/utils/index'
 import * as StaticDict from '@/staticDict'
 import {
   OnlineFormEventType,
@@ -104,18 +105,28 @@ interface FormAuth {
   mobile?: Record<string, FormAuthItem>
 }
 
+/** useOnlineForm 可选配置项 */
+interface UseOnlineFormOptions {
+  /** 是否只读 */
+  readOnly?: Ref<boolean>
+  /** 是否编辑模式 */
+  isEdit?: Ref<boolean>
+  /** 主表数据 */
+  masterTableData?: Ref<any>
+  /** 流程信息 */
+  flowInfo?: Ref<any>
+  /** 获取查询表格组件的回调函数，用于 batchDelete/deleteRow */
+  getQueryTable?: () => any
+  /** 表单组件 ref，用于 initWidgetRule 中调用 setRules */
+  formRef?: Ref<any>
+}
+
 /**
  * 在线表单组合式函数
  * @param formConfig - 表单配置
  * @param options - 可选配置项
  */
-export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
-  readOnly?: Ref<boolean>
-  isEdit?: Ref<boolean>
-  masterTableData?: Ref<any>
-  flowInfo?: Ref<any>
-} = {}) {
-  const router = useRouter()
+export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: UseOnlineFormOptions = {}) {
 
   // 响应式状态
   const isReady = ref(false)
@@ -738,6 +749,14 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
     getPrimaryData,
     getWidgetVisible,
     getSystemVariableValue,
+    /** 发起 HTTP 请求 */
+    doUrl,
+    /** 路由实例 */
+    router,
+    /** 显示消息提示 */
+    message: showToast,
+    /** 显示确认对话框 */
+    confirm: showConfirm,
   })
 
   /**
@@ -1039,6 +1058,10 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
       })
     }
     Object.assign(rules, rulesObj)
+    // 延迟调用表单组件的 setRules 方法，确保组件已渲染完毕
+    setTimeout(() => {
+      options.formRef?.value?.setRules?.(rules)
+    }, 200)
   }
 
   /**
@@ -1277,7 +1300,8 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
    * @param batchDeleteRows - 要删除的行数据列表
    */
   const batchDelete = (batchDeleteRows: any[]): void => {
-    const table = (builtFormConfig.value as any).queryTable?.table
+    const queryTable = options.getQueryTable?.()
+    const table = queryTable?.table
     if (!table)
       return
     const params = {
@@ -1309,7 +1333,8 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
    * @param row - 要删除的行数据
    */
   const deleteRow = (row: any): void => {
-    const table = (builtFormConfig.value as any).queryTable?.table
+    const queryTable = options.getQueryTable?.()
+    const table = queryTable?.table
     if (!table)
       return
     const params = {
