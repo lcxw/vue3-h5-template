@@ -4,7 +4,7 @@ import { showDialog, showToast } from 'vant'
  * 在线查询表单
  * 用于展示数据列表，支持筛选、排序、新增、编辑、删除等操作
  */
-import { computed, nextTick, onMounted, provide, ref, watch } from 'vue'
+import { computed, provide, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { doUrl } from '@/common/ajax'
 import { FlowOperationController } from '@/api/FlowController/FlowOperationController'
@@ -14,8 +14,6 @@ import OnlineEditForm from './OnlineEditForm.vue'
 import { useOnlineForm } from './useOnlineForm'
 
 const props = defineProps<{
-  formId?: string
-  entryId?: string
   formConfig?: any
   rowData?: any
 }>()
@@ -449,20 +447,9 @@ watch(() => props.formConfig, (newConfig) => {
   }
 }, { immediate: true })
 
-// 页面挂载后刷新列表（等待表单配置就绪）
-onMounted(() => {
-  nextTick(() => {
-    if (isReady.value) {
-      tableWidget.value.loadDataList(1)
-    }
-  })
-})
-
-// 监听 isReady 变化，就绪后首次加载数据
-const hasInitialLoaded = ref(false)
+// 监听 isReady 变为 true 后首次加载数据
 watch(isReady, (ready) => {
-  if (ready && !hasInitialLoaded.value) {
-    hasInitialLoaded.value = true
+  if (ready) {
     tableWidget.value.loadDataList(1)
   }
 })
@@ -481,6 +468,7 @@ function toggleDelete() {
 // 暴露方法供父组件调用
 defineExpose({
   toggleDelete,
+  closeSubPage,
 })
 </script>
 
