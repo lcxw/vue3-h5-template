@@ -45,6 +45,7 @@ const {
   initFormWidgetList,
   initWidgetRule,
   initWidgetLinkage,
+  rebuildFormConfig,
   getWidgetValue,
   onValueChange,
   getWidgetVisible,
@@ -385,6 +386,7 @@ watch(() => props.formConfig, (newConfig) => {
   if (newConfig) {
     formConfigRef.value = newConfig
     isReady.value = false
+    rebuildFormConfig()
     initPage()
     initFormWidgetList()
     initWidgetRule()

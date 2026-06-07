@@ -33,6 +33,7 @@ const {
   initFormWidgetList,
   initWidgetRule,
   initWidgetLinkage,
+  rebuildFormConfig,
   getWidgetValue,
   onValueChange,
   getWidgetVisible,
@@ -186,7 +187,7 @@ async function loadTableData(params: any): Promise<{ dataList: any[], totalCount
     }
     const res = await doUrl('/admin/flow/flowOperation/listWorkOrder', 'post', params)
     res.dataList = res.dataList.map((item: any) => {
-      const initTaskInfo = item.initTaskInfo == null ? {} : JSON.parse(item.initTaskInfo)
+      const initTaskInfo = item.initTaskInfo == null ? {} : (typeof item.initTaskInfo === 'string' ? JSON.parse(item.initTaskInfo) : item.initTaskInfo)
       const runtimeTaskInfo = (Array.isArray(item.runtimeTaskInfoList) && item.runtimeTaskInfoList.length > 0) ? item.runtimeTaskInfoList[0] : {}
       return {
         ...item,
@@ -398,6 +399,7 @@ watch(() => props.formConfig, (newConfig) => {
   if (newConfig) {
     formConfigRef.value = newConfig
     isReady.value = false
+    rebuildFormConfig()
     initPage()
     initFormWidgetList()
     initWidgetRule()

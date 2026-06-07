@@ -47,6 +47,7 @@ const {
   initFormWidgetList,
   initWidgetRule,
   initWidgetLinkage,
+  rebuildFormConfig,
   getWidgetValue,
   onValueChange,
   getWidgetVisible,
@@ -552,6 +553,7 @@ watch(() => props.formConfig, (newConfig) => {
       getPDKByFormId(props.editFormId)
     }
     isReady.value = false
+    rebuildFormConfig()
     initPage()
     initFormWidgetList()
     initWidgetRule()

@@ -36,6 +36,7 @@ const {
   initFormWidgetList,
   initWidgetRule,
   initWidgetLinkage,
+  rebuildFormConfig,
   getWidgetValue,
   onValueChange,
   getWidgetVisible,
@@ -328,7 +329,16 @@ function viewTaskFormKey(): Promise<void> {
     FlowOperationController.viewTaskFormKey(params).then((res) => {
       try {
         // HTTP 拦截器已经解析了 res.data，返回的可能是对象或字符串
-        const temp = typeof res === 'string' ? JSON.parse(res) : res
+        let temp: any
+        if (typeof res === 'string') {
+          temp = JSON.parse(res)
+        }
+        else if (res != null && typeof res === 'object') {
+          temp = res
+        }
+        else {
+          temp = {}
+        }
         taskReadOnly.value = temp.readOnly == null ? true : temp.readOnly
         formAuth.value = temp.formAuth
         // 解析权限配置
@@ -370,6 +380,7 @@ watch(() => props.formConfig, (newConfig) => {
   if (newConfig) {
     formConfigRef.value = newConfig
     isReady.value = false
+    rebuildFormConfig()
     viewTaskFormKey().then(() => {
       initPage()
       initFormWidgetList()

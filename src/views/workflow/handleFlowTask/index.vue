@@ -65,7 +65,8 @@ async function loadFormConfig(formId: string): Promise<void> {
   try {
     const res = await OnlineFormController.render({ formId })
     const onlineForm = res.onlineForm
-    const formConfigData = JSON.parse(onlineForm.widgetJson)
+    const widgetJson = onlineForm.widgetJson
+    const formConfigData = typeof widgetJson === 'string' ? JSON.parse(widgetJson) : widgetJson
     const mobileConfig = formConfigData.mobile
 
     if (mobileConfig != null) {

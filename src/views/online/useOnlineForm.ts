@@ -145,6 +145,60 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
   })
 
   /**
+   * 轻量级拷贝数据源对象，避免 JSON.stringify 序列化巨大的引用链
+   * 只拷贝数据源自身属性 + 简化的 masterTable（列信息不含字典/规则引用）
+   */
+  const copyDatasourceLite = (datasource: any): any => {
+    const copy: any = {}
+    for (const key of Object.keys(datasource)) {
+      if (key !== 'masterTable' && key !== 'relationList') {
+        copy[key] = datasource[key]
+      }
+    }
+    if (datasource.masterTable) {
+      copy.masterTable = copyTableLite(datasource.masterTable)
+    }
+    return copy
+  }
+
+  /**
+   * 轻量级拷贝表对象，只拷贝列的基础属性，不含 dictInfo / ruleList 等交叉引用
+   */
+  const copyTableLite = (table: any): any => {
+    const copy: any = {}
+    for (const key of Object.keys(table)) {
+      if (key !== 'columnList' && key !== 'datasource' && key !== 'relation') {
+        copy[key] = table[key]
+      }
+    }
+    if (Array.isArray(table.columnList)) {
+      copy.columnList = table.columnList.map((col: any) => {
+        const colCopy: any = {}
+        for (const key of Object.keys(col)) {
+          if (key !== 'dictInfo' && key !== 'ruleList') {
+            colCopy[key] = col[key]
+          }
+        }
+        return colCopy
+      })
+    }
+    return copy
+  }
+
+  /**
+   * 轻量级拷贝关联对象，避免 JSON.stringify 序列化巨大引用链
+   */
+  const copyRelationLite = (relation: any): any => {
+    const copy: any = {}
+    for (const key of Object.keys(relation)) {
+      if (key !== 'masterColumn' && key !== 'slaveTable' && key !== 'slaveColumn') {
+        copy[key] = relation[key]
+      }
+    }
+    return copy
+  }
+
+  /**
    * 构建表单配置
    * @param formData - 原始表单数据
    * @returns 构建后的表单配置
@@ -169,7 +223,6 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
         formConfig.dictMap!.set(dict.dictId, dict)
       })
     }
-    rawData.onlineDictList = null
 
     // 数据表
     if (Array.isArray(rawData.onlineTableList)) {
@@ -177,7 +230,6 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
         formConfig.tableMap!.set(table.tableId, table)
       })
     }
-    rawData.onlineTableList = null
 
     // 字段
     if (Array.isArray(rawData.onlineColumnList)) {
@@ -186,7 +238,9 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
           column.dictInfo = formConfig.dictMap!.get(column.dictId)
         }
         if (column.encodedRule != null && column.encodedRule !== null) {
-          column.encodedRule = JSON.parse(column.encodedRule)
+          if (typeof column.encodedRule === 'string') {
+            column.encodedRule = JSON.parse(column.encodedRule)
+          }
         }
         // 脱敏设置
         if (Array.isArray(formConfig.maskFieldList) && formConfig.maskFieldList.length > 0) {
@@ -209,7 +263,6 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
         formConfig.columnMap!.set(column.columnId, column)
       })
     }
-    rawData.onlineColumnList = null
 
     // 虚拟字段
     if (Array.isArray(rawData.onlineVirtualColumnList)) {
@@ -222,19 +275,17 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
         formConfig.columnMap!.set(column.columnId, column)
       })
     }
-    rawData.onlineVirtualColumnList = null
 
     // 数据源
     if (Array.isArray(rawData.onlineDatasourceList)) {
       rawData.onlineDatasourceList.forEach((datasource: any) => {
         datasource.masterTable = formConfig.tableMap!.get(datasource.masterTableId)
         if (datasource.masterTable) {
-          datasource.masterTable.datasource = JSON.parse(JSON.stringify(datasource))
+          datasource.masterTable.datasource = copyDatasourceLite(datasource)
         }
         formConfig.datasourceMap!.set(datasource.datasourceId, datasource)
       })
     }
-    rawData.onlineDatasourceList = null
 
     // 关联
     if (Array.isArray(rawData.onlineDatasourceRelationList)) {
@@ -248,43 +299,51 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
         relation.masterColumn = formConfig.columnMap!.get(relation.masterColumnId)
         relation.slaveTable = formConfig.tableMap!.get(relation.slaveTableId)
         if (relation.slaveTable) {
-          relation.slaveTable.relation = JSON.parse(JSON.stringify(relation))
-          relation.slaveTable.datasource = JSON.parse(JSON.stringify(datasource))
+          relation.slaveTable.relation = copyRelationLite(relation)
+          relation.slaveTable.datasource = datasource ? copyDatasourceLite(datasource) : undefined
         }
         relation.slaveColumn = formConfig.columnMap!.get(relation.slaveColumnId)
         formConfig.relationMap!.set(relation.relationId, relation)
       })
     }
-    rawData.onlineDatasourceRelationList = null
 
     // 校验规则
     if (Array.isArray(rawData.onlineColumnRuleList)) {
       rawData.onlineColumnRuleList.forEach((rule: any) => {
         const column = formConfig.columnMap!.get(rule.columnId)
         if (column) {
-          if (!Array.isArray(column.ruleList))
+          if (!Array.isArray(column.ruleList) || column.ruleList.length === 0)
             column.ruleList = []
           column.ruleList.push(rule)
         }
       })
     }
-    rawData.onlineColumnRuleList = null
 
     return formConfig
   }
 
   /**
-   * 获取计算后的表单配置
+   * 构建后的表单配置（ref，避免 computed 重复构建导致数据丢失）
    */
-  const form = computed(() => {
-    return buildFormConfig(formConfig.value || null)
-  })
+  const builtFormConfig = ref<FormConfig>(buildFormConfig(formConfig.value || null))
+
+  /**
+   * 重新构建表单配置（在 formConfig 变化时调用）
+   */
+  const rebuildFormConfig = (): void => {
+    builtFormConfig.value = buildFormConfig(formConfig.value || null)
+  }
+
+  /**
+   * 获取当前构建后的表单配置
+   */
+  const form = computed(() => builtFormConfig.value)
 
   /**
    * 获取主表信息
    */
   const masterTable = computed(() => {
-    return form.value.tableMap?.get(form.value.masterTableId || '')
+    return builtFormConfig.value.tableMap?.get(builtFormConfig.value.masterTableId || '')
   })
 
   /**
@@ -330,7 +389,7 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
   const getWidgetValueByColumn = (column: any): any => {
     if (column == null)
       return undefined
-    const table = column.tableId ? form.value.tableMap?.get(column.tableId) : undefined
+    const table = column.tableId ? builtFormConfig.value.tableMap?.get(column.tableId) : undefined
     if (table == null || table.datasource == null)
       return undefined
     return table.relation == null
@@ -521,7 +580,7 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
    * @returns 是否有权限
    */
   const checkOperationPermCode = (operation: any): boolean => {
-    if (form.value.formType !== SysOnlineFormType.QUERY || options.isEdit?.value)
+    if (builtFormConfig.value.formType !== SysOnlineFormType.QUERY || options.isEdit?.value)
       return true
     return checkPermCodeExist(getOperationPermCode(operation))
   }
@@ -597,10 +656,10 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
     }
     // 一对一关联选择组件
     if (widget.widgetType === SysCustomWidgetType.DataSelect
-      && (form.value.formType === SysOnlineFormType.FORM || form.value.formType === SysOnlineFormType.FLOW)) {
+      && (builtFormConfig.value.formType === SysOnlineFormType.FORM || builtFormConfig.value.formType === SysOnlineFormType.FLOW)) {
       const selectRow = (detail || {}).selectRow
       const relationId = (widget.props.relativeTable || {}).relationId
-      const relation = form.value.relationMap?.get(relationId)
+      const relation = builtFormConfig.value.relationMap?.get(relationId)
       if (relation != null) {
         formData[relation.variableName] = selectRow || {}
       }
@@ -649,8 +708,8 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
    * 初始化表单组件列表
    */
   const initFormWidgetList = (): void => {
-    if (Array.isArray(form.value.operationList)) {
-      form.value.operationList.forEach((operation) => {
+    if (Array.isArray(builtFormConfig.value.operationList)) {
+      builtFormConfig.value.operationList.forEach((operation) => {
         operation.eventInfo = (operation.eventList || []).reduce((retObj: Record<string, Function>, event: any) => {
           const fun = eventFunction(event)
           if (fun)
@@ -659,8 +718,8 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
         }, {})
       })
     }
-    if (Array.isArray(form.value.formEventList)) {
-      form.value.eventInfo = form.value.formEventList.reduce((retObj: Record<string, Function>, event: any) => {
+    if (Array.isArray(builtFormConfig.value.formEventList)) {
+      builtFormConfig.value.eventInfo = builtFormConfig.value.formEventList.reduce((retObj: Record<string, Function>, event: any) => {
         const fun = eventFunction(event)
         if (fun)
           retObj[event.eventType] = fun
@@ -668,28 +727,28 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
       }, {})
     }
     else {
-      form.value.eventInfo = {}
+      builtFormConfig.value.eventInfo = {}
     }
     errorMessage.value = []
-    if (Array.isArray(form.value.widgetList)) {
-      form.value.widgetList.forEach((widget) => {
+    if (Array.isArray(builtFormConfig.value.widgetList)) {
+      builtFormConfig.value.widgetList.forEach((widget) => {
         initWidget(widget)
       })
     }
-    if (form.value.tableWidget) {
-      initWidget(form.value.tableWidget)
-      form.value.tableWidget.table = masterTable.value
-      if (form.value.tableWidget.table) {
-        if (form.value.tableWidget.table.datasource) {
-          form.value.tableWidget.datasource = form.value.tableWidget.table.datasource
+    if (builtFormConfig.value.tableWidget) {
+      initWidget(builtFormConfig.value.tableWidget)
+      builtFormConfig.value.tableWidget.table = masterTable.value
+      if (builtFormConfig.value.tableWidget.table) {
+        if (builtFormConfig.value.tableWidget.table.datasource) {
+          builtFormConfig.value.tableWidget.datasource = builtFormConfig.value.tableWidget.table.datasource
         }
-        if (form.value.tableWidget.table.relation) {
-          form.value.tableWidget.relation = form.value.tableWidget.table.relation
+        if (builtFormConfig.value.tableWidget.table.relation) {
+          builtFormConfig.value.tableWidget.relation = builtFormConfig.value.tableWidget.table.relation
         }
       }
     }
-    if (form.value.leftWidget)
-      initWidget(form.value.leftWidget)
+    if (builtFormConfig.value.leftWidget)
+      initWidget(builtFormConfig.value.leftWidget)
     if (errorMessage.value.length > 0) {
       console.error(errorMessage.value)
     }
@@ -702,14 +761,14 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
   const initWidget = (widget: Widget): void => {
     if (widget != null) {
       if (widget.bindData.tableId) {
-        widget.table = form.value.tableMap?.get(widget.bindData.tableId)
+        widget.table = builtFormConfig.value.tableMap?.get(widget.bindData.tableId)
       }
       if (widget.bindData.columnId) {
-        widget.column = form.value.columnMap?.get(widget.bindData.columnId)
+        widget.column = builtFormConfig.value.columnMap?.get(widget.bindData.columnId)
       }
       if (widget.bindData.dataType === SysCustomWidgetBindDataType.Custom) {
         if (widget.props.dictId != null) {
-          widget.dictInfo = form.value.dictMap?.get(widget.props.dictId)
+          widget.dictInfo = builtFormConfig.value.dictMap?.get(widget.props.dictId)
         }
       }
       else {
@@ -760,7 +819,7 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
         })
       }
       if (widget.props.dictInfo && widget.props.dictInfo.dictId) {
-        widget.props.dictInfo.dict = form.value.dictMap?.get(widget.props.dictInfo.dictId)
+        widget.props.dictInfo.dict = builtFormConfig.value.dictMap?.get(widget.props.dictInfo.dictId)
       }
       if (widget.column && widget.column.dictInfo != null) {
         dropdownWidgetList.value.push(widget)
@@ -778,9 +837,9 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
         }
         if (Array.isArray(widget.props.tableColumnList)) {
           widget.props.tableColumnList.forEach((tableColumn) => {
-            tableColumn.table = form.value.tableMap?.get(tableColumn.tableId)
-            tableColumn.column = form.value.columnMap?.get(tableColumn.columnId)
-            tableColumn.relation = form.value.relationMap?.get(tableColumn.relationId)
+            tableColumn.table = builtFormConfig.value.tableMap?.get(tableColumn.tableId)
+            tableColumn.column = builtFormConfig.value.columnMap?.get(tableColumn.columnId)
+            tableColumn.relation = builtFormConfig.value.relationMap?.get(tableColumn.relationId)
             if (tableColumn.table == null || tableColumn.column == null) {
               errorMessage.value.push({
                 widget,
@@ -816,10 +875,10 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
         if (Array.isArray(widget.props.dictInfo.paramList)) {
           widget.props.dictInfo.paramList.forEach((dictParam: any) => {
             if (dictParam.dictValueType === SysOnlineParamValueType.TABLE_COLUMN) {
-              let linkageItem = form.value.linkageMap?.get(dictParam.dictValue)
+              let linkageItem = builtFormConfig.value.linkageMap?.get(dictParam.dictValue)
               if (linkageItem == null) {
                 linkageItem = []
-                form.value.linkageMap!.set(dictParam.dictValue, linkageItem)
+                builtFormConfig.value.linkageMap!.set(dictParam.dictValue, linkageItem)
               }
               linkageItem.push(widget)
             }
@@ -849,8 +908,9 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
    * @returns 校验规则项
    */
   const buildRuleItem = (column: any, rule: any, trigger: 'onBlur' | 'onChange' = 'onBlur'): ValidateRule | undefined => {
-    if (rule.propDataJson)
-      rule.data = JSON.parse(rule.propDataJson)
+    if (rule.propDataJson) {
+      rule.data = typeof rule.propDataJson === 'string' ? JSON.parse(rule.propDataJson) : rule.propDataJson
+    }
     if (column != null && rule != null) {
       switch (rule.onlineRule.ruleType) {
         case SysOnlineRuleType.INTEGER_ONLY:
@@ -929,8 +989,8 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
    */
   const initWidgetRule = (): void => {
     const rulesObj: Record<string, ValidateRule[]> = {}
-    if (Array.isArray(form.value.widgetList)) {
-      form.value.widgetList.forEach((widget) => {
+    if (Array.isArray(builtFormConfig.value.widgetList)) {
+      builtFormConfig.value.widgetList.forEach((widget) => {
         buildWidgetRule(widget, rulesObj)
       })
     }
@@ -953,11 +1013,11 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
    * 初始化组件联动
    */
   const initWidgetLinkage = (): void => {
-    if (!form.value.linkageMap)
+    if (!builtFormConfig.value.linkageMap)
       return
-    form.value.linkageMap.forEach((widgetList, key) => {
-      const column = form.value.columnMap?.get(key)
-      const table = column ? form.value.tableMap?.get(column.tableId) : undefined
+    builtFormConfig.value.linkageMap.forEach((widgetList, key) => {
+      const column = builtFormConfig.value.columnMap?.get(key)
+      const table = column ? builtFormConfig.value.tableMap?.get(column.tableId) : undefined
       if (!table)
         return
       const watchKey = `formData.${table.relation == null ? table.datasource.variableName : table.relation.variableName}.${column.columnName}`
@@ -980,7 +1040,7 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
   const getParamValue = (valueType: number, valueData: any): any => {
     switch (valueType) {
       case SysOnlineParamValueType.TABLE_COLUMN:
-        const column = form.value.columnMap?.get(valueData)
+        const column = builtFormConfig.value.columnMap?.get(valueData)
         return column ? getWidgetValueByColumn(column) : undefined
       case SysOnlineParamValueType.STATIC_DICT:
         return Array.isArray(valueData) ? valueData[1] : undefined
@@ -1035,7 +1095,7 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
     const tempList: string[] = []
     if (widget == null) {
       // 返回所有忽略字段
-      form.value.tableMap?.forEach((table) => {
+      builtFormConfig.value.tableMap?.forEach((table) => {
         getTableIgnoreFieldList(table, tempList)
       })
     }
@@ -1065,9 +1125,9 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
    * 初始化页面数据
    */
   const initPage = (): void => {
-    if (!form.value.tableMap)
+    if (!builtFormConfig.value.tableMap)
       return
-    form.value.tableMap.forEach((table) => {
+    builtFormConfig.value.tableMap.forEach((table) => {
       if (table.relation == null) {
         // 主表
         const tempObj = Array.isArray(table.columnList)
@@ -1108,8 +1168,8 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
       }
     })
     // 初始化自定义字段
-    if (Array.isArray(form.value.customFieldList)) {
-      form.value.customFieldList.forEach((field) => {
+    if (Array.isArray(builtFormConfig.value.customFieldList)) {
+      builtFormConfig.value.customFieldList.forEach((field) => {
         formData.customField[field.fieldName] = undefined
       })
     }
@@ -1131,7 +1191,7 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
    * @returns 操作信息
    */
   const getOperation = (type: number): any => {
-    return findItemFromList(form.value.operationList || [], type, 'type')
+    return findItemFromList(builtFormConfig.value.operationList || [], type, 'type')
   }
 
   /**
@@ -1141,7 +1201,7 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
    */
   const operationVisible = (type: number): boolean => {
     const operation = getOperation(type)
-    return !form.value.readOnly && hasOperator(type) && checkOperationVisible(operation)
+    return !builtFormConfig.value.readOnly && hasOperator(type) && checkOperationVisible(operation)
   }
 
   /**
@@ -1173,7 +1233,7 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
    * @param batchDeleteRows - 要删除的行数据列表
    */
   const batchDelete = (batchDeleteRows: any[]): void => {
-    const table = (form.value as any).queryTable?.table
+    const table = (builtFormConfig.value as any).queryTable?.table
     if (!table)
       return
     const params = {
@@ -1205,7 +1265,7 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
    * @param row - 要删除的行数据
    */
   const deleteRow = (row: any): void => {
-    const table = (form.value as any).queryTable?.table
+    const table = (builtFormConfig.value as any).queryTable?.table
     if (!table)
       return
     const params = {
@@ -1297,7 +1357,7 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
    */
   const provideFormContext = () => {
     provide('form', () => ({
-      ...form.value,
+      ...builtFormConfig.value,
       readOnly: formReadOnly.value,
       getWidgetValue,
       onValueChange,
@@ -1341,6 +1401,7 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: {
     formReadOnly,
     getUserInfo,
     // 方法
+    rebuildFormConfig,
     buildFormConfig,
     getSystemVariableValue,
     getWidgetValueByColumn,
