@@ -66,7 +66,7 @@ function str(
   let length: number;
   const mind = gap;
   let partial: string[] = [];
-  const value = holder[key];
+  let value = holder[key];
   const isBigNumber =
     value != null && (value instanceof BigNumber || BigNumber.isBigNumber(value));
 

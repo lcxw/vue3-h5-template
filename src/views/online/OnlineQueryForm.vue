@@ -324,7 +324,8 @@ async function loadTableData(params: any): Promise<{ dataList: any[], totalCount
       params = {}
     const table = form.value.tableMap?.get(masterTable.value?.tableId || '')
     if (table == null) {
-      throw new Error('未配置关联表')
+      console.warn('loadTableData: 表单配置未就绪或未配置关联表')
+      return { dataList: [], totalCount: 0 }
     }
     params = {
       ...params,
@@ -448,11 +449,22 @@ watch(() => props.formConfig, (newConfig) => {
   }
 }, { immediate: true })
 
-// 页面挂载后刷新列表
+// 页面挂载后刷新列表（等待表单配置就绪）
 onMounted(() => {
   nextTick(() => {
-    tableWidget.value.loadDataList(1)
+    if (isReady.value) {
+      tableWidget.value.loadDataList(1)
+    }
   })
+})
+
+// 监听 isReady 变化，就绪后首次加载数据
+const hasInitialLoaded = ref(false)
+watch(isReady, (ready) => {
+  if (ready && !hasInitialLoaded.value) {
+    hasInitialLoaded.value = true
+    tableWidget.value.loadDataList(1)
+  }
 })
 
 /**
