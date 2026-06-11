@@ -5,7 +5,7 @@
  */
 import { computed, inject, onMounted, provide, ref } from 'vue'
 import { findItemFromList } from '@/utils/index'
-import { SysCustomWidgetType, SysOnlineFieldKind, SysOnlineFormType, SysOnlineColumnFilterType } from '@/staticDict/index'
+import { OnlineFormEventType, SysCustomWidgetType, SysOnlineFieldKind, SysOnlineFormType, SysOnlineColumnFilterType } from '@/staticDict/index'
 import { getDictDataList } from '@/views/online/utils'
 import { isChart } from './utils'
 import OnlineCustomGroup from './OnlineCustomGroup.vue'
@@ -215,9 +215,8 @@ const disabledStatus = computed(() => {
   catch {
     // formAuth 可能不可用
   }
-  if (props.widget.eventInfo && typeof props.widget.eventInfo[3] === 'function') {
-    // OnlineFormEventType.DISABLE = 3
-    return props.widget.eventInfo[3]()
+  if (props.widget.eventInfo && typeof props.widget.eventInfo[OnlineFormEventType.DISABLE] === 'function') {
+    return props.widget.eventInfo[OnlineFormEventType.DISABLE]()
   }
   return (props.widget.props || {}).disabled
 })
