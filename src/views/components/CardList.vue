@@ -54,6 +54,7 @@ watch(
       class="list-box"
       :support-pull-refresh="false"
       :data-list="value"
+      :finished="true"
     >
       <slot :data="value" />
     </CustomList>

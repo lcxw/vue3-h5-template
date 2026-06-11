@@ -7,6 +7,7 @@ import { showToast } from 'vant'
 import { computed, nextTick, onMounted, provide, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { OnlineFormEventType, SysOnlineColumnFilterType, SysOnlineFieldKind, SysOnlineRelationType } from '@/staticDict/index'
+import OnlineCustomBlock from '../components/Online/OnlineCustomBlock.vue'
 import { useOnlineForm } from './useOnlineForm'
 
 const props = defineProps<{
@@ -599,19 +600,7 @@ watch(() => props.formConfig, (newConfig) => {
       <!-- 表单主体 -->
       <div class="main-box">
         <van-form ref="formRef" :model="formData">
-          <!-- TODO: 需要实现 OnlineCustomBlock 组件 -->
-          <!-- <OnlineCustomBlock :widgetList="form.widgetList" :key="date" /> -->
-          <van-cell-group inset>
-            <van-field
-              v-for="widget in visibleWidgetList"
-              :key="widget.variableName"
-              v-model="formData[widget.propString]"
-              :label="widget.showName"
-              :required="widget.props.required"
-              :rules="rules[widget.propString] || []"
-              :placeholder="`请输入${widget.showName}`"
-            />
-          </van-cell-group>
+          <OnlineCustomBlock :widget-list="form.widgetList" :key="date" />
         </van-form>
       </div>
 

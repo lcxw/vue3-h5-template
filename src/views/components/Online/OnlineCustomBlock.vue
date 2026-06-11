@@ -86,7 +86,7 @@ const validWidgetList = computed(() => {
       v-for="(widget, index) in validWidgetList"
       :key="index + widget.variableName"
       :class="subWidgetClass"
-      :span="widget.props?.span ? widget.props.span / 2 : 24"
+      :span="24"
     >
       <div :style="{ marginBottom: (widget.props?.paddingBottom ? widget.props.paddingBottom : 0) + 'px' }">
         <OnlineCustomWidget

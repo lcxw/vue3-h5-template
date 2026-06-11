@@ -826,6 +826,25 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: UseOn
       if (widget.bindData.tableId) {
         widget.table = builtFormConfig.value.tableMap?.get(widget.bindData.tableId)
       }
+      // List/Table 组件可能没有 bindData.tableId，需要通过子组件推导关联表
+      if ((widget.widgetType === SysCustomWidgetType.List || widget.widgetType === SysCustomWidgetType.Table) && !widget.table) {
+        if (Array.isArray(widget.childWidgetList)) {
+          const findTableId = (wList: any[]): string | undefined => {
+            for (const w of wList) {
+              if (w.bindData?.tableId) return w.bindData.tableId
+              if (Array.isArray(w.childWidgetList)) {
+                const found = findTableId(w.childWidgetList)
+                if (found) return found
+              }
+            }
+            return undefined
+          }
+          const tableId = findTableId(widget.childWidgetList)
+          if (tableId) {
+            widget.table = builtFormConfig.value.tableMap?.get(tableId)
+          }
+        }
+      }
       if (widget.bindData.columnId) {
         widget.column = builtFormConfig.value.columnMap?.get(widget.bindData.columnId)
       }

@@ -104,7 +104,7 @@ function getValue(data: any, widget: any): any {
  * @param widget - 组件配置
  */
 function getWidgetValue(widget: any): any {
-  if (props.rowData == null || widget.bindData.dataType !== SysCustomWidgetBindDataType.getValue('Column')) {
+  if (props.rowData == null || widget.bindData.dataType !== SysCustomWidgetBindDataType.Column) {
     return form().getWidgetValue(widget)
   } else {
     if (props.parentWidget == null) {
@@ -144,7 +144,7 @@ function onWidgetValueChange(widget: any, val: any, detail?: any): void {
   const dictData = (detail || {}).dictData
   if (widget.relation && dictData && props.rowData) {
     if (
-      widget.bindData.dataType === SysCustomWidgetBindDataType.getValue('Column') &&
+      widget.bindData.dataType === SysCustomWidgetBindDataType.Column &&
       widget.column
     ) {
       if (Array.isArray(dictData)) {
@@ -237,14 +237,15 @@ function onSelectChange(checked: boolean): void {
 .online-image-card {
   position: relative;
   padding: 10px;
-  border-radius: 5px;
+  border-radius: 8px;
   background: white;
-  margin: 15px 0;
+  margin: 0;
+  border: 1px solid #ebedf0;
 }
 
 .card-box {
   display: flex;
-  justify-content: flex-start;
+  flex-direction: column;
 }
 
 .card-content {
@@ -255,7 +256,7 @@ function onSelectChange(checked: boolean): void {
 
 .image {
   flex-shrink: 0;
-  margin-right: 10px;
+  margin-bottom: 8px;
 }
 
 .select {

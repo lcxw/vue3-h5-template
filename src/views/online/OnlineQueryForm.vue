@@ -11,6 +11,7 @@ import { FlowOperationController } from '@/api/FlowController/FlowOperationContr
 import { OnlineFormEventType, SysCustomWidgetOperationType, SysOnlineColumnFilterType, SysOnlineFormType, SysOnlineRelationType } from '@/staticDict/index'
 import { TableWidget } from '@/utils/widget'
 import OnlineEditForm from './OnlineEditForm.vue'
+import OnlineImageCard from '../components/Online/OnlineImageCard.vue'
 import { useOnlineForm } from './useOnlineForm'
 
 const props = defineProps<{
@@ -530,8 +531,14 @@ defineExpose({
           :key="index"
           class="list-item"
         >
-          <!-- TODO: 需要实现 TaskCard 组件 -->
-          <van-cell-group inset>
+          <OnlineImageCard
+            v-if="cardWidget"
+            :row-data="data"
+            :widget="cardWidget"
+            :parent-widget="queryTable"
+            @click="handlerEditOperation(data)"
+          />
+          <van-cell-group v-else inset>
             <van-cell
               :title="getCardData(data).title"
               :label="getCardData(data).subTitle.join('\n')"

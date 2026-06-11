@@ -3,7 +3,7 @@ import { computed, inject, nextTick, ref, watch } from 'vue'
 import { showDialog } from 'vant'
 import { OnlineFormEventType, SysCustomWidgetOperationType } from '@/staticDict/index'
 import CustomList from '../CustomList.vue'
-import ImageCard from '../ImageCard.vue'
+import OnlineImageCard from './OnlineImageCard.vue'
 
 /**
  * OnlineCustomList 在线自定义列表组件
@@ -244,12 +244,13 @@ defineExpose({
       class="list-box"
       :data-list="value"
       :support-pull-refresh="false"
+      :finished="true"
     >
-      <ImageCard
+      <OnlineImageCard
         v-for="(data, i) in value"
         :key="i"
         class="list-item"
-        :data="(data as any)"
+        :row-data="(data as any)"
         :widget="(cardWidget as any)"
         :parent-widget="(widget as any)"
       >
@@ -289,7 +290,7 @@ defineExpose({
             </span>
           </div>
         </template>
-      </ImageCard>
+      </OnlineImageCard>
     </CustomList>
   </div>
 </template>
@@ -297,6 +298,14 @@ defineExpose({
 <style scoped>
 .online-custom-list {
   padding: 2px 4px;
+}
+
+.list-item {
+  margin-bottom: 10px;
+}
+
+.list-item:last-child {
+  margin-bottom: 0;
 }
 
 .card-menu {
