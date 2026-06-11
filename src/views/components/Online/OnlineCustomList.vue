@@ -298,9 +298,20 @@ defineExpose({
 <style scoped>
 .online-custom-list {
   padding: 2px 4px;
+  width: 100%;
+}
+
+.list-box {
+  width: 100%;
+}
+
+.list-box :deep(.van-list) {
+  width: 100%;
 }
 
 .list-item {
+  display: block;
+  width: 100%;
   margin-bottom: 10px;
 }
 

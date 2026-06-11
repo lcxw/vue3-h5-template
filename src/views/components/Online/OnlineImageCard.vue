@@ -236,6 +236,8 @@ function onSelectChange(checked: boolean): void {
 
 .online-image-card {
   position: relative;
+  width: 100%;
+  box-sizing: border-box;
   padding: 10px;
   border-radius: 8px;
   background: white;
@@ -251,7 +253,7 @@ function onSelectChange(checked: boolean): void {
 .card-content {
   flex-grow: 1;
   flex-shrink: 1;
-  width: 100px;
+  min-width: 0;
 }
 
 .image {
