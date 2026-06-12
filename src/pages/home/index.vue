@@ -233,7 +233,7 @@ onMounted(() => {
 
 <style lang="less" scoped>
 .home-container {
-  background: #f5f5f5;
+  background: #F6F7F9;
   min-height: 100vh;
 }
 

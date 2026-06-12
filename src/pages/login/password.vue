@@ -142,7 +142,7 @@ function onCancel(): void {
 <style scoped lang="scss">
 .password-page {
   height: 100vh;
-  background: #f5f5f5;
+  background: #F6F7F9;
 }
 
 .page-body {

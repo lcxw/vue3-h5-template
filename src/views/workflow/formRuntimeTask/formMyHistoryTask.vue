@@ -188,7 +188,9 @@ defineExpose({ refresh })
 
 <style lang="less" scoped>
 .form-my-history-task {
+  min-height: 100vh;
   padding: 16px;
+  background: #F6F7F9;
 }
 
 .task-item + .task-item {

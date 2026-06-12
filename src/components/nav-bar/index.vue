@@ -21,4 +21,19 @@ function onClickRight(event: TouchEvent | MouseEvent) {
   </van-nav-bar>
 </template>
 
-<style scoped></style>
+<style scoped>
+:deep(.van-nav-bar) {
+  background-color: #ffffff;
+  border-bottom: 1px solid #ebedf0;
+}
+
+:deep(.van-nav-bar__title) {
+  color: #323233;
+  font-weight: 500;
+  font-size: 30rpx;
+}
+
+:deep(.van-nav-bar__right .van-icon) {
+  color: #323233;
+}
+</style>

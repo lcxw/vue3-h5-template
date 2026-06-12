@@ -1,13 +1,56 @@
 :root {
+  // 主题色（与原项目 uview.theme.scss 对齐）
+  --primary-color: #0080ff;
+  --success-color: #19be6b;
+  --warning-color: #ff9900;
+  --error-color: #fa3534;
+  --info-color: #909399;
+
+  // 文字色
   --color-text: var(--van-text-color, #323233);
-  --color-background-2: #fafafa;
+  --color-text-secondary: #606266;
+  --color-text-placeholder: #909399;
+  --color-text-light: #c0c4cc;
+
+  // 背景色
+  --color-background: #F6F7F9;
+  --color-background-2: #F6F7F9;
   --color-block-background: #ffffff;
+
+  // 边框色
   --color-border: var(--van-border-color, #ebedf0);
+  --color-border-light: #e4e7ed;
+  --color-form-item-border: #dcdfe6;
+
+  // Vant 组件主题变量覆盖
+  --van-primary-color: #0080ff;
+  --van-success-color: #19be6b;
+  --van-warning-color: #ff9900;
+  --van-danger-color: #fa3534;
+
+  --van-text-color: #323233;
+  --van-text-color-2: #606266;
+  --van-text-color-3: #909399;
+
+  --van-border-color: #ebedf0;
+  --van-background: #F6F7F9;
+  --van-background-2: #ffffff;
+
+  --van-tabbar-item-active-color: #0080ff;
+  --van-nav-bar-icon-color: #323233;
+  --van-nav-bar-text-color: #323233;
+  --van-nav-bar-title-text-color: #323233;
 }
 
 html.dark {
   --color-text: var(--van-text-color, #f5f5f5);
+  --color-text-secondary: #a0a0a0;
+  --color-text-placeholder: #6b6b6b;
+  --color-text-light: #5a5a5a;
+  --color-background: #1c1c1e;
   --color-background-2: var(--van-background-2, #1c1c1e);
   --color-block-background: var(--van-border-color, #3a3a3c);
   --color-border: var(--van-border-color, #3a3a3c);
+  --color-border-light: var(--van-border-color, #3a3a3c);
+  --color-form-item-border: var(--van-border-color, #3a3a3c);
 }

@@ -279,7 +279,7 @@ onActivated(() => {
 
 <style lang="less" scoped>
 .form-my-task {
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   background: #F6F7F9;

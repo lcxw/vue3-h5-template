@@ -229,29 +229,30 @@ onMounted(() => {
 
 <style scoped lang="scss">
 .my-container {
-  background: #f5f5f5;
+  background: #F6F7F9;
   min-height: 100vh;
 }
 
 .setting-container {
-  padding: 16px;
+  padding: 0 32rpx;
 }
 
 .container-avatar {
-  margin: 40rpx 0 30rpx;
+  margin: 80rpx 0 61rpx;
   display: flex;
   justify-content: center;
 }
 
 .menu-list {
-  margin-bottom: 16px;
+  margin-bottom: 24rpx;
 }
 
 .content-section {
-  padding: 16px;
+  margin-top: 31rpx;
+  padding: 0 32rpx;
 
   .menu-list {
-    margin-bottom: 16px;
+    margin-bottom: 24rpx;
   }
 }
 
