@@ -4,7 +4,6 @@
     "jsx": "preserve",
     "lib": ["ESNext", "DOM"],
     "experimentalDecorators": true,
-    "baseUrl": ".",
     "module": "ESNext",
     "moduleResolution": "bundler",
     "paths": {
