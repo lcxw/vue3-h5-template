@@ -75,6 +75,17 @@ const dirty = ref(false)
 const errorMessage = ref('')
 
 /**
+ * 计算级联面板属性映射
+ * 将 FieldCascader 的 props 格式转换为 CustomCascaderPanel 期望的格式
+ */
+const cascaderProps = computed(() => ({
+  text: props.props.label,
+  value: props.props.value,
+  children: props.props.children,
+  showCheckbox: props.props.showCheckbox,
+}))
+
+/**
  * 计算树形数据列表
  */
 const treeDataList = computed(() => {
@@ -120,6 +131,7 @@ function onCancel() {
  */
 function onConfirm() {
   emit('update:value', selectValue.value)
+  emit('change', selectValue.value)
   onCancel()
 }
 
@@ -216,7 +228,7 @@ watch(
         :multiple="multiple"
         :color="color"
         :options="treeDataList"
-        :props="props"
+        :props="cascaderProps"
         @change-check="onSelectChange"
       />
       <van-empty v-if="dataList.length <= 0" description="暂无数据" />
