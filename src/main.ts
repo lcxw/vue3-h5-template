@@ -1,5 +1,6 @@
 import { createApp } from 'vue'
 import { initializeDarkMode } from '@/utils/dark-mode'
+import { Lazyload } from 'vant'
 import App from './App.vue'
 import router from './router'
 import { store } from './store'
@@ -25,5 +26,6 @@ initializeDarkMode()
 const app = createApp(App)
 app.use(store)
 app.use(router)
+app.use(Lazyload)
 
 app.mount('#app')
