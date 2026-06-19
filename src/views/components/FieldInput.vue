@@ -59,6 +59,15 @@ const dirty = ref(false)
 const errorMessage = ref('')
 
 /**
+ * 安全转换为字符串，null/undefined 显示为空
+ * @param val 输入值
+ */
+function safeString(val: unknown): string {
+  if (val == null) return ''
+  return String(val)
+}
+
+/**
  * 输入变化处理
  * @param val 输入值
  */
@@ -115,7 +124,7 @@ defineExpose({
       :label="label"
       :required="required"
       :name="prop"
-      :model-value="String(value)"
+      :model-value="safeString(value)"
       :type="type as 'text' | 'number' | 'digit' | 'tel' | 'email' | 'password' | 'textarea'"
       :maxlength="maxlength > 0 ? maxlength : undefined"
       :placeholder="placeholder"
