@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import { buildGetUrl } from '@/utils/index'
 import { projectConfig } from '@/config'
 import { SysOnlineFieldKind } from '@/staticDict/index'
+import { validateWidget as validateWidgetUtil } from '@/utils/validate'
 
 /**
  * FieldUpload 上传字段组件
@@ -69,6 +70,9 @@ const emit = defineEmits<{
 
 const router = useRouter()
 const fileList = ref<UploaderFileListItem[]>([])
+const dirty = ref(false)
+/** 校验错误信息 */
+const errorMessage = ref('')
 
 /** 是否为在线表单模式 */
 const isOnlineMode = computed(() => props.widget != null)
@@ -311,6 +315,40 @@ function onChange() {
   const value = fileListToJson(fileList.value)
   emit('update:value', value)
   emit('change', value)
+  dirty.value = true
+}
+
+/**
+ * 设置脏状态
+ * @param val 脏状态值
+ */
+function setDirty(val: boolean) {
+  dirty.value = val
+}
+
+/**
+ * 获取脏状态
+ */
+function getDirty() {
+  return dirty.value
+}
+
+/**
+ * 校验组件值是否符合规则
+ * @returns Promise，校验失败时 resolve 错误信息字符串
+ */
+function validateWidget(): Promise<string | void> {
+  return new Promise((resolve) => {
+    validateWidgetUtil(props.rules as any[], props.value)
+      .then(() => {
+        errorMessage.value = ''
+        resolve()
+      })
+      .catch((e: string) => {
+        errorMessage.value = e
+        resolve(e)
+      })
+  })
 }
 
 /**
@@ -416,6 +454,13 @@ function initFileList() {
     console.log('[FieldUpload] prop=%s value=%o (empty)', props.prop, props.value)
   }
 }
+
+// 暴露方法供父组件调用
+defineExpose({
+  setDirty,
+  getDirty,
+  validateWidget,
+})
 
 // 监听值变化，参照原始代码使用 setTimeout 延迟初始化
 watch(
