@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { nextTick, onMounted, ref, watch } from 'vue'
 import CustomList from '../CustomList.vue'
+import { SysCommonBizController } from '@/api/Controller/SysCommonBizController'
 
 /**
  * DeptSelectDlg 部门选择弹窗组件
- * 提供部门选择弹窗功能
+ * 提供部门选择弹窗功能，支持分页加载和搜索过滤
  */
 
 interface DeptItem {
@@ -19,81 +20,149 @@ interface Props {
   multiple?: boolean
   /** 行键名 */
   rowKey?: string
+  /** 过滤对象 */
+  filterObject?: Record<string, unknown>
 }
 
 const props = withDefaults(defineProps<Props>(), {
   value: undefined,
   multiple: false,
   rowKey: 'deptId',
+  filterObject: undefined,
 })
 
 const emit = defineEmits<{
   (e: 'update:value', value: unknown[]): void
+  (e: 'confirm', items: DeptItem[]): void
   (e: 'close'): void
 }>()
 
+/** 搜索条件 */
 const formFilter = ref({
   deptName: undefined as string | undefined,
 })
+/** 已选中的部门ID列表 */
 const selectItems = ref<(string | number)[]>([])
+/** 部门列表数据 */
 const deptList = ref<DeptItem[]>([])
+/** 加载状态 */
 const loading = ref(false)
+/** 是否加载完成 */
 const finished = ref(false)
+/** 当前页码 */
+const currentPage = ref(1)
+/** 每页数量 */
+const pageSize = 20
+/** 列表组件引用 */
 const cardListRef = ref<InstanceType<typeof CustomList> | null>(null)
 
-// 模拟部门数据
-const mockDeptList: DeptItem[] = [
-  { deptId: '1', deptName: '技术部' },
-  { deptId: '2', deptName: '产品部' },
-  { deptId: '3', deptName: '运营部' },
-  { deptId: '4', deptName: '市场部' },
-  { deptId: '5', deptName: '财务部' },
-]
-
 /**
- * 刷新部门列表
+ * 加载部门列表数据
+ * @param pageNum - 页码
+ * @param reload - 是否重新加载（清空列表）
  */
-function refreshDept() {
-  deptList.value = mockDeptList.filter((item) => {
-    if (formFilter.value.deptName) {
-      return item.deptName.includes(formFilter.value.deptName)
+function loadDeptList(pageNum: number, reload = false): void {
+  console.log(`[DeptSelectDlg] loadDeptList, pageNum=${pageNum}, reload=${reload}, currentLength=${deptList.value.length}`)
+  loading.value = true
+  const filterParams: Record<string, any> = {
+    ...(props.filterObject || {}),
+  }
+  if (formFilter.value.deptName) {
+    filterParams.deptName = formFilter.value.deptName
+  }
+  SysCommonBizController.list({
+    widgetType: 'upms_dept',
+    pageParam: {
+      pageNum,
+      pageSize,
+      count: true,
+    },
+    filter: filterParams,
+  }).then((res: any) => {
+    const dataList = (res?.dataList || []) as DeptItem[]
+    console.log(`[DeptSelectDlg] 接口返回, dataList长度=${dataList.length}, totalCount=${res?.totalCount}`)
+    if (reload || pageNum === 1) {
+      deptList.value = dataList
+    } else {
+      deptList.value = [...deptList.value, ...dataList]
     }
-    return true
+    currentPage.value = pageNum
+    const totalCount = res?.totalCount
+    if (totalCount != null && totalCount > 0) {
+      finished.value = deptList.value.length >= totalCount
+    } else {
+      finished.value = dataList.length < pageSize
+    }
+    console.log(`[DeptSelectDlg] 加载完成, deptList长度=${deptList.value.length}, finished=${finished.value}`)
+  }).catch((e) => {
+    console.error(`[DeptSelectDlg] 加载失败:`, e)
+    finished.value = true
+  }).finally(() => {
+    loading.value = false
   })
-  finished.value = true
 }
 
 /**
- * 加载更多
+ * 刷新部门列表（重置并重新加载第一页）
  */
-function loadMore() {
-  loading.value = true
-  // 模拟加载
-  setTimeout(() => {
-    refreshDept()
-    loading.value = false
-  }, 500)
+function refreshDept(): void {
+  finished.value = false
+  // 重置列表组件的页码，确保下次加载更多从第2页开始
+  cardListRef.value?.reset()
+  loadDeptList(1, true)
+}
+
+/** 搜索防抖定时器 */
+let searchTimer: number | null = null
+
+/**
+ * 监听搜索关键词变化，防抖搜索
+ */
+watch(
+  () => formFilter.value.deptName,
+  () => {
+    if (searchTimer) {
+      clearTimeout(searchTimer)
+    }
+    searchTimer = window.setTimeout(() => {
+      refreshDept()
+    }, 300)
+  },
+)
+
+/**
+ * 加载更多
+ * @param pageNum - 页码
+ */
+function loadMore(pageNum: number): void {
+  console.log(`[DeptSelectDlg] loadMore触发, pageNum=${pageNum}, loading=${loading.value}, finished=${finished.value}`)
+  if (loading.value || finished.value) return
+  loadDeptList(pageNum)
 }
 
 /**
  * 检查是否选中
- * @param data 部门数据
+ * @param data - 部门数据
+ * @returns 是否选中
  */
 function isSelect(data: DeptItem): boolean {
   if (data == null)
     return false
-  return selectItems.value.includes(data[props.rowKey as keyof DeptItem])
+  const key = data[props.rowKey as keyof DeptItem] as string | number
+  return selectItems.value.includes(key)
 }
 
 /**
  * 选择变化处理
- * @param data 部门数据
- * @param val 是否选中
+ * @param data - 部门数据
+ * @param val - 是否选中
  */
 function onSelectChange(data: DeptItem, val: boolean) {
-  if (data == null || data[props.rowKey as keyof DeptItem] == null)
+  if (data == null)
     return
-  const key = data[props.rowKey as keyof DeptItem]
+  const key = data[props.rowKey as keyof DeptItem] as string | number
+  if (key == null)
+    return
   if (val) {
     if (!selectItems.value.includes(key)) {
       if (props.multiple) {
@@ -118,11 +187,33 @@ function onBack() {
 }
 
 /**
+ * 获取选中的部门对象列表
+ */
+function getSelectedDeptItems(): DeptItem[] {
+  const keySet = new Set(selectItems.value)
+  return deptList.value.filter(item => {
+    const key = item[props.rowKey as keyof DeptItem] as string | number
+    return keySet.has(key)
+  })
+}
+
+/**
  * 提交选择
  */
 function onSubmit() {
+  const selectedItems = getSelectedDeptItems()
   emit('update:value', selectItems.value)
+  emit('confirm', selectedItems)
   emit('close')
+}
+
+/**
+ * 获取部门项的唯一键
+ * @param data - 部门数据
+ * @returns 唯一键值
+ */
+function getItemKey(data: DeptItem): string | number {
+  return data[props.rowKey as keyof DeptItem] as string | number
 }
 
 /**
@@ -130,10 +221,10 @@ function onSubmit() {
  */
 function reset() {
   if (props.multiple) {
-    selectItems.value = Array.isArray(props.value) ? [...props.value] : []
+    selectItems.value = Array.isArray(props.value) ? [...props.value as (string | number)[]] : []
   }
   else {
-    selectItems.value = Array.isArray(props.value) ? [...props.value] : (props.value == null ? [] : [props.value])
+    selectItems.value = Array.isArray(props.value) ? [...props.value as (string | number)[]] : (props.value == null ? [] : [props.value as string | number])
   }
 }
 
@@ -149,11 +240,6 @@ watch(
 // 组件挂载后初始化
 onMounted(() => {
   refreshDept()
-  nextTick(() => {
-    if (cardListRef.value) {
-      cardListRef.value.reset()
-    }
-  })
 })
 </script>
 
@@ -183,7 +269,7 @@ onMounted(() => {
       >
         <div
           v-for="data in deptList"
-          :key="data[props.rowKey]"
+          :key="getItemKey(data)"
           class="dept-item"
           @click="onSelectChange(data, !isSelect(data))"
         >
@@ -243,7 +329,7 @@ onMounted(() => {
 
   .main-box {
     flex: 1;
-    overflow: auto;
+    position: relative;
     padding: 0px 16px;
 
     .dept-item {

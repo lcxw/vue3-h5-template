@@ -152,7 +152,7 @@ defineExpose({
       @click="showPicker = !disabled"
     />
     <SelectPopup
-      :show-picker="showPicker"
+      :show-picker-dlg="showPicker"
       :value="value"
       :title="label"
       :multiple="multiple"

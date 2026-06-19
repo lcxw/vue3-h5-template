@@ -217,9 +217,6 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: UseOn
   const buildFormConfig = (formData: FormConfig | null): FormConfig => {
     if (formData == null)
       return {} as FormConfig
-    // 防御性保护：已构建过的配置直接返回，避免重复构建导致数据异常
-    if ((formData as any)._isConfigBuilt)
-      return formData as FormConfig
     const formConfig: FormConfig = { ...formData }
     formConfig.datasourceMap = new Map()
     formConfig.relationMap = new Map()
@@ -333,8 +330,6 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: UseOn
       })
     }
 
-    // 标记已构建，避免重复构建
-    ;(formData as any)._isConfigBuilt = true
     return formConfig
   }
 
@@ -831,6 +826,20 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: UseOn
    */
   const initWidget = (widget: Widget): void => {
     if (widget != null) {
+      const isDictWidget = [
+      SysCustomWidgetType.Radio,
+      SysCustomWidgetType.CheckBox,
+      SysCustomWidgetType.Select,
+      SysCustomWidgetType.Cascader,
+      SysCustomWidgetType.Tree,
+    ].includes(widget.widgetType)
+      
+      if (isDictWidget) {
+        console.log(`[initWidget] 字典组件初始化: ${widget.variableName}, widgetType=${widget.widgetType}`)
+        console.log(`[initWidget] bindData=`, widget.bindData)
+        console.log(`[initWidget] props=`, widget.props)
+      }
+      
       if (widget.bindData.tableId) {
         widget.table = builtFormConfig.value.tableMap?.get(widget.bindData.tableId)
       }
@@ -855,14 +864,36 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: UseOn
       }
       if (widget.bindData.columnId) {
         widget.column = builtFormConfig.value.columnMap?.get(widget.bindData.columnId)
-      }
-      if (widget.bindData.dataType === SysCustomWidgetBindDataType.Custom) {
-        if (widget.props.dictId != null) {
-          widget.dictInfo = builtFormConfig.value.dictMap?.get(widget.props.dictId)
+        if (isDictWidget) {
+          console.log(`[initWidget] ${widget.variableName} column=`, widget.column)
         }
       }
-      else {
-        widget.dictInfo = (widget.column || {}).dictInfo
+      /**
+       * 设置字典信息，按优先级从多个来源获取，确保字典组件能正确加载数据
+       * 优先级：column.dictInfo > props.dictId > props.dictInfo.dictId
+       */
+      let dictInfo = null
+      // 1. 优先从 column.dictInfo 获取（字段绑定组件，通过 column.dictId 关联）
+      if (widget.column?.dictInfo) {
+        dictInfo = widget.column.dictInfo
+      }
+      // 2. 从 props.dictId 获取（自定义字段等场景）
+      else if (widget.props?.dictId != null) {
+        dictInfo = builtFormConfig.value.dictMap?.get(widget.props.dictId)
+      }
+      // 3. 从 props.dictInfo.dictId 获取（报表、过滤器等场景）
+      else if (widget.props?.dictInfo?.dictId != null) {
+        dictInfo = builtFormConfig.value.dictMap?.get(widget.props.dictInfo.dictId)
+      }
+      widget.dictInfo = dictInfo
+      if (isDictWidget) {
+        console.log(`[initWidget] 字典组件 ${widget.variableName}:`, {
+          dictInfo,
+          dictMapSize: builtFormConfig.value.dictMap?.size,
+          bindData: widget.bindData,
+          column: widget.column,
+          props: widget.props,
+        })
       }
       if (widget.table) {
         if (widget.table.datasource)

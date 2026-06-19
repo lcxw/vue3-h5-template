@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import DeptSelectDlg from './DeptSelectDlg.vue'
+import { SysCommonBizController } from '@/api/Controller/SysCommonBizController'
 
 /**
  * DeptSelect 部门选择组件
- * 提供部门选择功能
+ * 提供部门选择功能，支持回显部门名称
  */
 
 interface Props {
@@ -63,6 +64,30 @@ const selectValue = computed(() => {
 })
 
 /**
+ * 根据部门ID列表加载部门详情
+ * @param idList 部门ID列表
+ */
+function loadSelectedDepts(idList: (string | number)[]): void {
+  if (!idList || idList.length === 0) {
+    selectedItems.value = []
+    return
+  }
+  SysCommonBizController.viewByIds({
+    widgetType: 'upms_dept',
+    fieldName: props.props.value,
+    fieldValues: idList.join(','),
+  }).then((res: any) => {
+    if (Array.isArray(res)) {
+      selectedItems.value = res
+    } else {
+      selectedItems.value = []
+    }
+  }).catch(() => {
+    selectedItems.value = []
+  })
+}
+
+/**
  * 点击处理
  */
 function onClick() {
@@ -76,6 +101,14 @@ function onClick() {
  */
 function onCloseSelectDlg() {
   showSelectDlg.value = false
+}
+
+/**
+ * 选择确认处理（立即更新显示）
+ * @param items 选中的部门对象列表
+ */
+function onConfirm(items: any[]) {
+  selectedItems.value = items
 }
 
 /**
@@ -95,15 +128,21 @@ function getSelectItems() {
   return selectedItems.value
 }
 
-// 监听值变化，更新选中项
+// 监听值变化，加载选中部门详情
 watch(
   () => props.value,
-  () => {
-    // 这里可以调用API获取部门信息
-    // 简化实现，直接清空选中项
-    if (!props.value || (Array.isArray(props.value) && props.value.length === 0)) {
+  (newVal) => {
+    if (!newVal || (Array.isArray(newVal) && newVal.length === 0)) {
       selectedItems.value = []
+      return
     }
+    let idList: (string | number)[]
+    if (Array.isArray(newVal)) {
+      idList = newVal as (string | number)[]
+    } else {
+      idList = [newVal as string | number]
+    }
+    loadSelectedDepts(idList)
   },
   { immediate: true },
 )
@@ -138,6 +177,7 @@ defineExpose({
         :value="value"
         :multiple="multiple"
         @update:value="onSelectChange"
+        @confirm="onConfirm"
         @close="onCloseSelectDlg"
       />
     </van-popup>

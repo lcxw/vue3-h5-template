@@ -1,5 +1,5 @@
 <template>
-  <div :style="{ height: height || '100%' }">
+  <div ref="listContainerRef" class="custom-list-container" :style="{ height: height || '100%' }">
     <van-pull-refresh
       v-model="innerLoading"
       :disabled="!supportPullRefresh"
@@ -8,6 +8,7 @@
       <van-list
         v-model:loading="innerLoading"
         :finished="finished"
+        :scroll-container="scrollContainer"
         @load="loadMore"
       >
         <slot />
@@ -20,7 +21,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch, onMounted } from 'vue'
 
 /**
  * CustomList 自定义列表组件
@@ -58,6 +59,11 @@ const emit = defineEmits<{
   (e: 'load', pageNum: number): void
 }>()
 
+/** 列表容器 ref，用于指定 van-list 的滚动容器 */
+const listContainerRef = ref<HTMLElement | null>(null)
+/** 滚动容器，默认为组件自身，确保 van-list 能正确检测滚动 */
+const scrollContainer = computed(() => listContainerRef.value)
+
 /** 内部加载状态（避免直接修改 prop） */
 const innerLoading = ref(props.isLoading)
 const pageNum = ref(1)
@@ -77,27 +83,42 @@ function onRefresh() {
 
 /**
  * 加载更多
+ * van-list 触发 load 事件时会自动将 loading 设为 true，
+ * 因此只需检查 finished 状态，无需重复检查 loading
  */
 function loadMore() {
-  if (innerLoading.value || props.finished) return
+  console.log(`[CustomList] loadMore触发, pageNum=${pageNum.value}, finished=${props.finished}, innerLoading=${innerLoading.value}`)
+  if (props.finished) return
   emit('load', pageNum.value++)
 }
 
 /**
- * 重置列表
+ * 重置列表（重置页码，不自动加载）
  */
 function reset() {
+  pageNum.value = 1
+}
+
+/**
+ * 重置并刷新（重置页码后立即加载第一页）
+ */
+function refresh() {
   pageNum.value = 1
   onRefresh()
 }
 
 // 暴露方法供父组件调用
 defineExpose({
-  reset
+  reset,
+  refresh
 })
 </script>
 
 <style scoped>
+.custom-list-container {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
 .empty-box {
   display: flex;
   flex-direction: column;

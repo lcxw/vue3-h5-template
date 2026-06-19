@@ -3,7 +3,7 @@
  * OnlineCustomWidget 在线自定义组件分发器
  * 根据 widgetType 分发到不同的表单控件，支持递归渲染
  */
-import { computed, inject, onMounted, provide, ref } from 'vue'
+import { computed, inject, onMounted, provide, ref, watch } from 'vue'
 import { findItemFromList } from '@/utils/index'
 import { OnlineFormEventType, SysCustomWidgetType, SysOnlineFieldKind, SysOnlineFormType, SysOnlineColumnFilterType } from '@/staticDict/index'
 import { getDictDataList } from '@/views/online/utils'
@@ -53,7 +53,7 @@ const emit = defineEmits<{
 }>()
 
 /** 注入表单上下文 */
-const formInject = inject<() => any>('form', undefined)
+const formInject = inject<(() => any) | undefined>('form', undefined)
 
 /**
  * 提供 parentWidget 给子组件注入
@@ -314,25 +314,52 @@ function onValueChange(val: any, selectRow?: any): void {
 }
 
 /**
+ * 获取字典信息对象
+ * 优先从 widget.dictInfo 获取，兼容多种配置方式
+ * @returns 字典信息对象
+ */
+function getDictInfo(): any {
+  console.log(`[OnlineCustomWidget] getDictInfo, widget=${props.widget?.variableName}, full widget=`, props.widget)
+  // 1. 优先使用 widget.dictInfo（列绑定组件/自定义字段组件的字典信息）
+  if (props.widget.dictInfo) {
+    return props.widget.dictInfo
+  }
+  // 2. 尝试从 props.dictInfo.dict 获取（自定义字段的另一种字典配置方式）
+  if (props.widget.props?.dictInfo?.dict) {
+    return props.widget.props.dictInfo.dict
+  }
+  // 3. 报表模式：直接使用 props.dictInfo 作为字典信息
+  if (form().pageCode != null && props.widget.props?.dictInfo) {
+    return props.widget.props.dictInfo
+  }
+  console.warn(`[OnlineCustomWidget] 组件 ${props.widget.variableName} 未找到字典信息`)
+  return null
+}
+
+/**
  * 加载下拉字典数据
  * Task 2.14: 恢复报表字典加载模式（区分报表字典和在线表单字典）
  */
 function loadDropdownData(): void {
+  console.log(`[OnlineCustomWidget] loadDropdownData, widget=${props.widget?.variableName}, widgetType=${props.widget?.widgetType}, isDictWidget=${isDictWidget.value}`)
   if (props.widget == null || !isDictWidget.value) return
   dictDataList.value = []
-  if (form().getDictDataList) {
-    let dictCall
-    if (form().pageCode != null) {
-      // 报表字典：直接传入 dictInfo 对象
-      const dictInfo = props.widget.props?.dictInfo
-      dictCall = getDictDataList(null, dictInfo, form().getDropdownParams(props.widget))
-    } else {
-      // 在线表单字典：传入 dictInfo.dict
-      const dictInfo = (props.widget.props?.dictInfo || {}).dict
-      if (dictInfo == null) return
-      dictCall = getDictDataList(null, dictInfo, form().getDropdownParams(props.widget))
-    }
-    dictCall.then((res: any[]) => {
+
+  const dictInfo = getDictInfo()
+  console.log(`[OnlineCustomWidget] dictInfo=`, dictInfo)
+  if (dictInfo == null) {
+    console.warn(`[OnlineCustomWidget] 组件 ${props.widget.variableName} 未找到字典信息`)
+    return
+  }
+
+  let dropdownParams: Record<string, any> = {}
+  const formCtx = form()
+  if (formCtx && typeof formCtx.getDropdownParams === 'function') {
+    dropdownParams = formCtx.getDropdownParams(props.widget) || {}
+  }
+
+  getDictDataList(null, dictInfo, dropdownParams)
+    .then((res: any[]) => {
       res.forEach((item: any) => {
         item.id = item.id + ''
         if (item.parentId) item.parentId = item.parentId + ''
@@ -342,8 +369,10 @@ function loadDropdownData(): void {
         res = props.widget.eventInfo[7](res)
       }
       dictDataList.value = res
-    }).catch(() => {})
-  }
+    })
+    .catch((e: any) => {
+      console.error(`[OnlineCustomWidget] 组件 ${props.widget.variableName} 字典加载失败:`, e)
+    })
 }
 
 /**
@@ -352,6 +381,17 @@ function loadDropdownData(): void {
 function reset(): void {
   loadDropdownData()
 }
+
+// 监听字典信息变化，重新加载数据
+watch(
+  () => props.widget?.dictInfo,
+  () => {
+    if (isDictWidget.value) {
+      loadDropdownData()
+    }
+  },
+  { deep: true },
+)
 
 // 组件挂载后加载下拉数据并注册到 widgetImplList
 onMounted(() => {

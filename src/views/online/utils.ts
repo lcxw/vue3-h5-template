@@ -117,8 +117,23 @@ function getUrlDictData(dictInfo: DictInfo, dictParams?: Record<string, any>): P
  * @returns Promise，返回字典数据
  */
 export function getDictDataList(sender: any, dictInfo: DictInfo | null | undefined, dictParams?: Record<string, any>): Promise<DictItem[]> {
-  if (dictInfo == null || dictInfo.dictDataJson == null)
+  if (dictInfo == null)
     return Promise.reject(new Error('字典信息为空'))
+  
+  // TABLE 和 CODE 类型通过接口获取数据，不需要 dictDataJson
+  if (dictInfo.dictType === SysOnlineDictType.TABLE || dictInfo.dictType === SysOnlineDictType.CODE) {
+    return getTableDictData(sender, dictInfo.dictId, dictParams)
+  }
+  
+  // URL 类型通过 URL 获取数据，不需要 dictDataJson
+  if (dictInfo.dictType === SysOnlineDictType.URL) {
+    return getUrlDictData(dictInfo, dictParams || {})
+  }
+  
+  // 以下类型需要 dictDataJson
+  if (dictInfo.dictDataJson == null)
+    return Promise.reject(new Error('字典数据为空'))
+  
   let dictData: any
   try {
     dictData = JSON.parse(dictInfo.dictDataJson)
@@ -126,12 +141,8 @@ export function getDictDataList(sender: any, dictInfo: DictInfo | null | undefin
   catch (e) {
     return Promise.reject(new Error('字典数据解析失败'))
   }
+  
   switch (dictInfo.dictType) {
-    case SysOnlineDictType.TABLE:
-    case SysOnlineDictType.CODE:
-      return getTableDictData(sender, dictInfo.dictId, dictParams)
-    case SysOnlineDictType.URL:
-      return getUrlDictData(dictInfo, dictParams || {})
     case SysOnlineDictType.CUSTOM:
       if (dictData != null && Array.isArray(dictData.dictData)) {
         return Promise.resolve(dictData.dictData)
