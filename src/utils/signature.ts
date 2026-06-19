@@ -5,8 +5,8 @@
 
 /** 笔迹点信息 */
 interface PointInfo {
-  time: number
-  dis: number
+  time?: number
+  dis?: number
   x: number
   y: number
   r?: number
@@ -218,13 +218,13 @@ export class Handwriting {
     this.currentPoint = point
     this.currentLine.unshift({
       time: Date.now(),
-      dis: this.distance(this.currentPoint, this.lastPoint as PointInfo, 'end'),
+      dis: this.distance(this.currentPoint, this.lastPoint!, 'end'),
       x: point.x,
       y: point.y
     })
 
     if (this.currentLine.length > 2) {
-      const info = (this.currentLine[0].time - this.currentLine[this.currentLine.length - 1].time) / this.currentLine.length
+      const info = ((this.currentLine[0] as any).time - (this.currentLine[this.currentLine.length - 1] as any).time) / this.currentLine.length
       // 可用于调试
     }
 
@@ -317,8 +317,8 @@ export class Handwriting {
     lastRadius = this.radius
 
     for (let n = 0; n < line.length - 1; n++) {
-      dis += line[n].dis
-      time += line[n].time - line[n + 1].time
+      dis += (line[n] as any).dis
+      time += (line[n] as any).time - (line[n + 1] as any).time
       if (dis > this.smoothness) break
     }
 

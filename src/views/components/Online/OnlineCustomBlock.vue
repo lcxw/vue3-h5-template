@@ -25,7 +25,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 /** 注入表单上下文 */
-const formInject = inject<() => any>('form', undefined)
+const formInject = inject<(() => any) | undefined>('form', undefined)
 
 /**
  * 安全获取表单上下文

@@ -56,7 +56,7 @@ const emit = defineEmits<{
  */
 function getColumnValue(row: Record<string, unknown>, columnNameList: string | string[]): unknown {
   if (Array.isArray(columnNameList)) {
-    let dataValue = columnNameList.length > 0 ? row : undefined
+    let dataValue: unknown = columnNameList.length > 0 ? row : undefined
     for (let i = 0; i < columnNameList.length; i++) {
       const name = columnNameList[i]
       if (name == null || dataValue == null) {
@@ -64,8 +64,9 @@ function getColumnValue(row: Record<string, unknown>, columnNameList: string | s
         break
       }
       const dictName = `${name}__DictMap`
-      dataValue = (dataValue as Record<string, unknown>)[dictName]
-        ? (dataValue as Record<string, unknown>)[dictName].name
+      const dictMap = (dataValue as Record<string, unknown>)[dictName]
+      dataValue = dictMap
+        ? (dictMap as { name: unknown }).name
         : (dataValue as Record<string, unknown>)[name]
     }
     return dataValue
@@ -73,7 +74,8 @@ function getColumnValue(row: Record<string, unknown>, columnNameList: string | s
   else {
     const columnName = columnNameList
     const dictName = `${columnName}__DictMap`
-    return row[dictName] ? row[dictName].name : row[columnName]
+    const dictMap = row[dictName]
+    return dictMap ? (dictMap as { name: unknown }).name : row[columnName]
   }
 }
 
@@ -119,11 +121,12 @@ const series = computed(() => {
     const serieData = props.data.map((dataItem) => {
       return getColumnValue(dataItem, valueItem.columnName)
     })
+    const seriesOptions = (props.options as Record<string, unknown>)?.series as Record<string, unknown> | undefined
     return {
       name: valueItem.name,
       type: 'bar',
       data: serieData,
-      stack: (props.options as Record<string, unknown>)?.series?.stack ? 'D' : undefined,
+      stack: seriesOptions?.stack ? 'D' : undefined,
     }
   })
 })
@@ -150,7 +153,8 @@ const chartOptions = computed(() => {
   }
 
   // 如果配置了横向显示，交换x轴和y轴
-  if ((props.options as Record<string, unknown>)?.series?.lateral) {
+  const seriesOptions = (props.options as Record<string, unknown>)?.series as Record<string, unknown> | undefined
+  if (seriesOptions?.lateral) {
     const xAxis = baseOptions.xAxis
     const yAxis = baseOptions.yAxis
     return {

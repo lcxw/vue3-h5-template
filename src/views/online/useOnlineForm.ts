@@ -541,7 +541,7 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: UseOn
     if (options.isEdit?.value)
       return true
     // 组件静态配置 visible
-    if (widget.props && widget.props.visible === false)
+    if (widget.props && (widget.props as any).visible === false)
       return false
     const formWidgetAuth = formAuth.value && formAuth.value.mobile ? formAuth.value.mobile[widget.variableName] : null
     if (formWidgetAuth && formWidgetAuth.hide)

@@ -76,14 +76,14 @@ const selectValue = computed(() => {
       temp = Array.isArray(props.value)
         ? props.value.map((item) => {
             const node = findItemFromList(props.dataList!, item, props.props.value)
-            return node ? node[props.props.label] : null
+            return node ? (node as any)[props.props.label] : null
           }).filter(item => item != null)
         : props.value
     }
     else {
       const node = findItemFromList(props.dataList!, props.value, props.props.value)
       if (node)
-        temp = node[props.props.label]
+        temp = (node as any)[props.props.label]
     }
   }
   return Array.isArray(temp) ? temp.join(' / ') : String(temp)

@@ -1,5 +1,9 @@
 /// <reference types="vite/client" />
 
+declare module 'virtual:svg-icons/register' {
+  export default function register(): void
+}
+
 interface ImportMetaEnv {
   /** API 基础路径 */
   readonly VITE_BASE_API: string

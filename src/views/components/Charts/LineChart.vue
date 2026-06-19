@@ -56,7 +56,7 @@ const emit = defineEmits<{
  */
 function getColumnValue(row: Record<string, unknown>, columnNameList: string | string[]): unknown {
   if (Array.isArray(columnNameList)) {
-    let dataValue = columnNameList.length > 0 ? row : undefined
+    let dataValue: any = columnNameList.length > 0 ? row : undefined
     for (let i = 0; i < columnNameList.length; i++) {
       const name = columnNameList[i]
       if (name == null || dataValue == null) {
@@ -64,8 +64,9 @@ function getColumnValue(row: Record<string, unknown>, columnNameList: string | s
         break
       }
       const dictName = `${name}__DictMap`
-      dataValue = (dataValue as Record<string, unknown>)[dictName]
-        ? (dataValue as Record<string, unknown>)[dictName].name
+      const dictObj = (dataValue as any)[dictName as string]
+      dataValue = dictObj
+        ? (dictObj as { name: unknown }).name
         : (dataValue as Record<string, unknown>)[name]
     }
     return dataValue
@@ -73,7 +74,8 @@ function getColumnValue(row: Record<string, unknown>, columnNameList: string | s
   else {
     const columnName = columnNameList
     const dictName = `${columnName}__DictMap`
-    return row[dictName] ? row[dictName].name : row[columnName]
+    const dictObj = row[dictName]
+    return dictObj ? (dictObj as { name: unknown }).name : row[columnName]
   }
 }
 

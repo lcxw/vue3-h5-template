@@ -195,8 +195,8 @@ function close() {
  */
 function deleteSignature() {
   deleteable.value = false
-  emit('update:value', undefined)
-  emit('change', undefined)
+  emit('update:value', '')
+  emit('change', '')
   imageValue.value = ''
 }
 

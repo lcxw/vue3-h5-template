@@ -73,7 +73,7 @@ const emit = defineEmits<{
   (e: 'close'): void
 }>()
 
-const selectValue = ref<unknown>(undefined)
+const selectValue = ref<any>(props.value as any)
 const selectPanelRef = ref<InstanceType<typeof CustomSelectPanel> | null>(null)
 
 /**

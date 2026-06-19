@@ -131,7 +131,7 @@ defineExpose({
         >
           <van-checkbox
             v-for="item in dataList"
-            :key="item[props.props.value]"
+            :key="String(item[props.props.value])"
             :name="item[props.props.value]"
             shape="square"
           >

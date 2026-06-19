@@ -123,7 +123,7 @@ defineExpose({
         >
           <van-radio
             v-for="item in dataList"
-            :key="item[props.props.value]"
+            :key="String(item[props.props.value])"
             :name="item[props.props.value]"
           >
             {{ item[props.props.label] }}

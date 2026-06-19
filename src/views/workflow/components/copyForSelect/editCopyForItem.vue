@@ -80,18 +80,21 @@ const deptTree = computed(() => {
 
 /** 部门岗位树形数据 */
 const deptPostTree = computed(() => {
-  if (Array.isArray(props.deptList) && Array.isArray(props.deptPostList)) {
-    const tempList = props.deptList.map(item => ({
+  if (Array.isArray(props.deptList) && Array.isArray(props.deptPostList)) {     
+    const deptItems = props.deptList.map(item => ({
       ...item,
       isDept: true,
       showCheckbox: false,
-    })).concat(props.deptPostList.map(deptPost => ({
+    }))
+    const postItems = props.deptPostList.map(deptPost => ({
       ...deptPost,
       parentId: deptPost.deptId,
       id: deptPost.deptPostId,
       name: deptPost.postShowName,
+      isDept: false,
       showCheckbox: true,
-    })))
+    }))
+    const tempList = [...deptItems, ...postItems] as any[]
     return treeDataTranslate(tempList)
   }
   return []
@@ -206,9 +209,10 @@ async function buildCopyForItemList(): Promise<{ type: string, value: CopyItem[]
     const res = await SysCommonBizController.viewByIds(params)
     if (Array.isArray(res)) {
       value = res.map((userItem: any) => ({
+        type: 'user',
         id: userItem.loginName,
         name: userItem.showName,
-        headImageUrl: getHeadImageUrl(userItem),
+        headImageUrl: getHeadImageUrl(userItem) ?? undefined,
       }))
     }
   }
@@ -221,13 +225,14 @@ async function buildCopyForItemList(): Promise<{ type: string, value: CopyItem[]
           const deptItem = path[path.length - 1] as Record<string, any>
           return {
             ...deptItem,
+            type: 'dept',
             id: deptItem.id,
             name: path.map(item => (item as Record<string, any>).name).join(' / '),
           }
         }
         return null
       })
-      .filter((item): item is CopyItem => item != null)
+      .filter(item => item != null) as CopyItem[]
   }
   else if (type === 'deptPostLeader' || type === 'upDeptPostLeader') {
     // 部门领导类型无需选择具体项
@@ -247,7 +252,7 @@ async function buildCopyForItemList(): Promise<{ type: string, value: CopyItem[]
         }
         return null
       })
-      .filter((item): item is CopyItem => item != null)
+      .filter(item => item != null) as CopyItem[]
   }
   else {
     // 角色、岗位等
@@ -255,6 +260,7 @@ async function buildCopyForItemList(): Promise<{ type: string, value: CopyItem[]
     value = list
       .filter(item => selectCopyForItem.value.includes(item.id))
       .map(item => ({
+        type: type,
         id: item.id,
         name: item.name,
       }))
@@ -337,7 +343,7 @@ onMounted(() => {
           ref="userListRef"
           v-model:value="selectCopyForItem"
           height="100%"
-          :props="{ text: 'name', value: 'loginName', disabled: copyItemDisabled }"
+          :props="{ text: 'name', value: 'loginName' }"
           :multiple="true"
           :data-list="loadSysUserData"
         />
@@ -348,10 +354,10 @@ onMounted(() => {
           ref="deptListRef"
           v-model:value="selectCopyForItem"
           :options="deptTree"
-          :props="{ text: 'name', value: 'id', disabled: copyItemDisabled }"
+          :props="{ text: 'name', value: 'id', children: 'children' }"
           :multiple="true"
           :time="time"
-          :filter="filterListItem"
+          v-bind:filter="filterListItem as any"
         />
 
         <!-- 抄送角色 -->
@@ -360,10 +366,10 @@ onMounted(() => {
           ref="dataListRef"
           v-model:value="selectCopyForItem"
           height="100%"
-          :props="{ text: 'name', value: 'id', disabled: copyItemDisabled }"
+          :props="{ text: 'name', value: 'id' }"
           :multiple="true"
           :data-list="roleList"
-          :filter="filterListItem"
+          v-bind:filter="filterListItem as any"
         />
 
         <!-- 抄送岗位 -->
@@ -372,10 +378,10 @@ onMounted(() => {
           ref="dataListRef"
           v-model:value="selectCopyForItem"
           height="100%"
-          :props="{ text: 'name', value: 'id', disabled: copyItemDisabled }"
+          :props="{ text: 'name', value: 'id' }"
           :multiple="true"
           :data-list="postList"
-          :filter="filterListItem"
+          v-bind:filter="filterListItem as any"
         />
 
         <!-- 指定部门岗位 -->
@@ -384,10 +390,10 @@ onMounted(() => {
           ref="deptPostListRef"
           v-model:value="selectCopyForItem"
           :options="deptPostTree"
-          :props="{ text: 'name', value: 'id', disabled: copyItemDisabled, showCheckbox: 'showCheckbox' }"
+          :props="{ text: 'name', value: 'id', children: 'children', disabled: copyItemDisabled, showCheckbox: 'showCheckbox' }"
           :multiple="true"
           :time="time"
-          :filter="filterListItem"
+          v-bind:filter="filterListItem as any"
         />
       </van-cell-group>
     </div>

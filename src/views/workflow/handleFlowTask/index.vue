@@ -141,7 +141,7 @@ const flowOperation = computed(() => {
         const multiSignAssignee = {
           ...item.multiSignAssignee,
           assigneeList: item.multiSignAssignee.assigneeList
-            ? item.multiSignAssignee.assigneeList.split(',')
+            ? (item.multiSignAssignee.assigneeList as any).split(',')
             : undefined,
         }
         return { ...item, multiSignAssignee }
@@ -261,7 +261,7 @@ async function handlerSubmit(operation: FlowOperation, copyItemList: CopyItem[])
  * @param operation - 操作类型
  * @param copyItemList - 抄送列表
  */
-async function handlerStart(operation: FlowOperation, copyItemList: CopyItem[]): void {
+async function handlerStart(operation: FlowOperation, copyItemList: CopyItem[]): Promise<void> {
   if (workflowFormRef.value && !workflowFormRef.value.isReady) {
     showMessage('表单数据加载中，请稍候！', 'warning')
     return
@@ -523,7 +523,7 @@ function handlerClose(): void {
  * @param success - 是否成功
  * @param taskCommitData - 提交数据
  */
-async function onTaskCommitCallback(success: boolean, taskCommitData?: Record<string, any>): void {
+async function onTaskCommitCallback(success: boolean, taskCommitData?: Record<string, any>): Promise<void> {
   const operation = commitInfo.value.operation!
   const formData = buildFormData(operation, commitInfo.value.formData || {}, taskCommitData || {})
   const copyItemListValue = copyItemList.value
@@ -779,7 +779,7 @@ onMounted(() => {
       <van-button
         v-for="operation in mainOperation"
         :key="operation.id"
-        :type="getButtonType(operation.type)"
+        :type="getButtonType(operation.type) as any"
         block
         @click="handlerOperation(operation)"
       >

@@ -25,7 +25,7 @@ interface Props {
     pageSize?: number
   }
   /** 过滤函数 */
-  filter?: (item: Record<string, unknown>) => boolean
+  filter?: any
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -95,11 +95,12 @@ async function loadList() {
   if (typeof props.dataList === 'function') {
     try {
       const res = await props.dataList(pageNum.value)
+      const dataList = res.dataList as Record<string, unknown>[]
       if (pageNum.value === 1) {
-        finalDataList.value = res.dataList
+        finalDataList.value = dataList
       }
       else {
-        finalDataList.value = [...finalDataList.value, ...res.dataList]
+        finalDataList.value = [...finalDataList.value, ...dataList]
       }
       if (res.dataList.length === 0 || res.totalCount <= 0) {
         status.value = 'nomore'
@@ -153,7 +154,7 @@ defineExpose({
       >
         <div
           v-for="item in finalDataList"
-          :key="item[finalProps.value]"
+          :key="String(item[finalProps.value])"
           class="cell-item"
         >
           <van-checkbox
@@ -173,7 +174,7 @@ defineExpose({
       >
         <div
           v-for="item in finalDataList"
-          :key="item[finalProps.value]"
+          :key="String(item[finalProps.value])"
           class="cell-item"
         >
           <van-radio :name="item[finalProps.value]" :disabled="calcItemDisabled(item)">

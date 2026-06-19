@@ -12,7 +12,7 @@ const suspectConstructorRx =
   /(?:c|\\u0063)(?:o|\\u006[Ff])(?:n|\\u006[Ee])(?:s|\\u0073)(?:t|\\u0074)(?:r|\\u0072)(?:u|\\u0075)(?:c|\\u0063)(?:t|\\u0074)(?:o|\\u006[Ff])(?:r|\\u0072)/;
 
 /** 解析选项 */
-interface ParseOptions {
+export interface ParseOptions {
   /** 是否严格模式，严格模式下重复键会报错 */
   strict?: boolean;
   /** 是否将大整数存储为字符串 */
@@ -147,8 +147,9 @@ function createJsonParse(options: ParseOptions = {}) {
     if (ch === 'e' || ch === 'E') {
       string += ch;
       next();
-      if (ch === '-' || ch === '+') {
-        string += ch;
+      const nextCh = String(ch);
+      if (nextCh === '-' || nextCh === '+') {
+        string += nextCh;
         next();
       }
       while (ch >= '0' && ch <= '9') {
@@ -268,14 +269,16 @@ function createJsonParse(options: ParseOptions = {}) {
     if (ch === '[') {
       next('[');
       white();
-      if (ch === ']') {
+      let currentCh = String(ch);
+      if (currentCh === ']') {
         next(']');
         return result; // 空数组
       }
       while (ch) {
         result.push(value());
         white();
-        if (ch === ']') {
+        currentCh = String(ch);
+        if (currentCh === ']') {
           next(']');
           return result;
         }
@@ -297,7 +300,8 @@ function createJsonParse(options: ParseOptions = {}) {
     if (ch === '{') {
       next('{');
       white();
-      if (ch === '}') {
+      let currentCh = String(ch);
+      if (currentCh === '}') {
         next('}');
         return result; // 空对象
       }
@@ -330,7 +334,8 @@ function createJsonParse(options: ParseOptions = {}) {
         }
 
         white();
-        if (ch === '}') {
+        currentCh = String(ch);
+        if (currentCh === '}') {
           next('}');
           return result;
         }

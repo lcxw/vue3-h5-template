@@ -61,7 +61,7 @@ const selectValue = computed(() => {
   if (props.multiple) {
     if (Array.isArray(props.dataList) && Array.isArray(props.value)) {
       return props.dataList.filter((data) => {
-        return props.value!.includes(data[props.prop.value])
+        return (props.value as any).includes(data[props.prop.value])
       })
     }
     else {
@@ -144,7 +144,7 @@ function onChange(data: Record<string, unknown>) {
     <div class="select-list">
       <div
         v-for="data in validDataList"
-        :key="data[prop.value]"
+        :key="String(data[prop.value])"
         class="select-item"
         :class="{ active: isActive(data) }"
         @click="onChange(data)"

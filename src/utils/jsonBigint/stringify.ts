@@ -94,9 +94,8 @@ function str(
       return isFinite(value) ? String(value) : 'null';
 
     case 'boolean':
-    case 'null':
     case 'bigint':
-      // 布尔值、null 和 BigInt 直接转换为字符串
+      // 布尔值和 BigInt 直接转换为字符串
       return String(value);
 
     case 'object':
@@ -173,6 +172,7 @@ export function stringify(
   replacer?: ((key: string, value: any) => any) | string[] | null,
   space?: number | string
 ): string {
+  let i: number;
   gap = '';
   indent = '';
 
@@ -185,10 +185,8 @@ export function stringify(
     indent = space;
   }
 
-  let i: number;
-
   // 如果有替换器，必须是函数或数组
-  const rep = replacer;
+  const rep = replacer ?? undefined;
   if (
     replacer &&
     typeof replacer !== 'function' &&

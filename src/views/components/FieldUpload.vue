@@ -31,6 +31,8 @@ interface Props {
   prop?: string
   /** 是否必填 */
   required?: boolean
+  /** 验证规则 */
+  rules?: any[]
   /** 是否禁用 */
   disabled?: boolean
   /** 是否只读 */
@@ -59,6 +61,7 @@ const props = withDefaults(defineProps<Props>(), {
   readOnly: false,
   isImage: true,
   downloadParams: undefined,
+  rules: undefined,
   widget: undefined,
   formFn: undefined,
 })
@@ -69,7 +72,7 @@ const emit = defineEmits<{
 }>()
 
 const router = useRouter()
-const fileList = ref<UploaderFileListItem[]>([])
+const fileList = ref<any[]>([])
 const dirty = ref(false)
 /** 校验错误信息 */
 const errorMessage = ref('')
@@ -235,9 +238,9 @@ function parseUploadData(jsonData: string, params: Record<string, any>): Uploade
  */
 function fileListToJson(list: UploaderFileListItem[]): string {
   const files = list.map(item => ({
-    name: item.name,
+    name: (item as any).name || (item.file?.name ?? ''),
     downloadUri: (item as any).downloadUri,
-    filename: (item as any).filename || item.name,
+    filename: (item as any).filename || (item as any).name || (item.file?.name ?? ''),
     uploadPath: (item as any).uploadPath,
   }))
   return JSON.stringify(files)
@@ -255,7 +258,7 @@ function afterRead(file: UploaderFileListItem | UploaderFileListItem[]) {
     if (isOnlineMode.value && uploadAction.value) {
       // 在线表单模式：真实上传到服务器
       const formDataObj = new FormData()
-      formDataObj.append('uploadFile', item.file as File)
+      formDataObj.append('uploadFile', item.file!)
       const fd = uploadFormData.value
       Object.keys(fd).forEach((key) => {
         formDataObj.append(key, fd[key])
@@ -358,7 +361,7 @@ function validateWidget(): Promise<string | void> {
  */
 function downloadFile(file: UploaderFileListItem) {
   if (!file?.url) return
-  const fileName = file.name || (file as any).filename || '未命名文件'
+  const fileName = (file as any).name || (file as any).filename || (file.file?.name ?? '未命名文件')
 
   // 文档类型跳转 OnlyOffice 预览
   const docExts = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'pdf', 'txt', 'csv']
@@ -513,7 +516,7 @@ watch(
               @click.stop="downloadFile(file)"
             >
               <van-icon name="description" size="16" />
-              <span class="file-link">{{ file.name || '未命名文件' }}</span>
+              <span class="file-link">{{ (file as any).name || '未命名文件' }}</span>
               <van-icon name="cross" size="14" color="#999" @click.stop="onDelete(file, index)" />
             </div>
             <van-uploader

@@ -28,13 +28,13 @@ interface Props {
     text: string
     value: string
     children: string
-    disabled?: string
+    disabled?: string | ((item: Record<string, any>) => boolean)
     leaf?: string
     showCheckbox?: string
     data?: unknown
   }
   /** 过滤函数 */
-  filter?: (item: Record<string, unknown>) => boolean
+  filter?: any
   /** 时间戳 */
   time?: number
 }
@@ -105,10 +105,10 @@ function isChecked(data: Record<string, unknown>): boolean {
   if (data == null)
     return false
   if (Array.isArray(props.value)) {
-    return props.value.includes(data[finalProps.value.value])
+    return props.value.includes(data[finalProps.value.value as string])
   }
   else {
-    return props.value === data[finalProps.value.value]
+    return props.value === data[finalProps.value.value as string]
   }
 }
 
@@ -117,9 +117,9 @@ function isChecked(data: Record<string, unknown>): boolean {
  * @param data 数据项
  */
 function onClickNode(data: Record<string, unknown>) {
-  if (!hasChild(data) && finalProps.value.showCheckbox != null && !data[finalProps.value.showCheckbox]) {
-    emit('update:value', data[finalProps.value.value])
-    emit('changeCheck', data[finalProps.value.value])
+  if (!hasChild(data) && finalProps.value.showCheckbox != null && !data[finalProps.value.showCheckbox as string]) {
+    emit('update:value', data[finalProps.value.value as string])
+    emit('changeCheck', data[finalProps.value.value as string])
     if (currentTabData.value) {
       tabDataList.value = tabDataList.value.slice(0, currentTabData.value.index + 1)
     }
@@ -161,11 +161,11 @@ function calcItemDisabled(data: Record<string, unknown>): boolean {
     return true
   if (data == null)
     return false
-  if (typeof finalProps.value.disabled === 'function') {
-    return finalProps.value.disabled(data)
+  if (typeof (finalProps.value.disabled as any) === 'function') {
+    return (finalProps.value.disabled as any)(data)
   }
   else {
-    return finalProps.value.disabled == null ? false : Boolean(data[finalProps.value.disabled])
+    return (finalProps.value.disabled as any) == null ? false : Boolean(data[finalProps.value.disabled as string])
   }
 }
 
@@ -175,8 +175,8 @@ function calcItemDisabled(data: Record<string, unknown>): boolean {
  */
 function hasChild(data: Record<string, unknown>): boolean {
   if (finalProps.value.leaf != null && finalProps.value.leaf !== '')
-    return !data[finalProps.value.leaf]
-  return Array.isArray(data[finalProps.value.children]) && data[finalProps.value.children].length > 0
+    return !data[finalProps.value.leaf as string]
+  return Array.isArray(data[finalProps.value.children as string]) && (data[finalProps.value.children as string] as any[]).length > 0
 }
 
 /**
@@ -186,7 +186,7 @@ function hasChild(data: Record<string, unknown>): boolean {
 function getTabItemTitle(tabData: TabData): string | null {
   if (!tabData || tabData.value == null)
     return null
-  return String(tabData.value[finalProps.value.text])
+  return String((tabData.value as Record<string, unknown>)[finalProps.value.text])
 }
 
 /**
@@ -231,7 +231,7 @@ function onSelectContentItem(tabData: TabData | undefined, data: Record<string, 
   tabData.value = data
   const tempTime = Date.now()
   tabDataList.value = tabDataList.value.slice(0, tabData.index + 1)
-  if (Array.isArray(data[finalProps.value.children]) && data[finalProps.value.children].length > 0) {
+  if (Array.isArray(data[finalProps.value.children as string]) && (data[finalProps.value.children as string] as any[]).length > 0) {
     tabDataList.value.push({
       id: tempTime,
       index: tabDataList.value.length,
@@ -319,7 +319,7 @@ defineExpose({
           <div
             v-for="(data, i) in getTabContentList(currentTabData?.index)"
             v-else
-            :key="data[finalProps.value]"
+            :key="String(data[finalProps.value])"
             class="cell-item"
             @click="onClickNode(data)"
           >

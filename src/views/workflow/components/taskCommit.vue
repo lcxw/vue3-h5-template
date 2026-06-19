@@ -117,7 +117,7 @@
         />
         <van-popup v-model:show="showPhrasePicker" position="bottom" round>
           <van-picker
-            :columns="phraseList"
+            :columns="phraseList.map(text => ({ text }))"
             @confirm="onPhraseConfirm"
             @cancel="showPhrasePicker = false"
           />

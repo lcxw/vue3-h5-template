@@ -176,7 +176,7 @@ function getTaskFlowList(): void {
   }).then((res) => {
     stepsList.value = res
     for (const item of stepsList.value) {
-      item.headImageUrl = getHeadImageUrl(item as any)
+      item.headImageUrl = getHeadImageUrl(item as any) ?? undefined
     }
     getNextTaskInfo()
   }).catch((e) => {

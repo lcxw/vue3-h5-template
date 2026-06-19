@@ -68,7 +68,7 @@ const emit = defineEmits<{
 }>()
 
 const showPickerDlg = ref(false)
-const selectValue = ref<unknown>(undefined)
+const selectValue = ref<any>(undefined)
 const cascadePanelRef = ref<InstanceType<typeof CustomCascaderPanel> | null>(null)
 const dirty = ref(false)
 /** 校验错误信息 */
