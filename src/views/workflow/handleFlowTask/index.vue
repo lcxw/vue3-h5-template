@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { CommitInfo, CopyItem, FlowOperation, TaskDetailsData } from '../types'
-import { showDialog, showToast } from 'vant'
+import { showDialog, showLoadingToast, showToast, closeToast } from 'vant'
 /**
  * 流程处理页面（核心）
  * 用于处理流程任务的审批、驳回、转办等操作
@@ -42,6 +42,8 @@ const commitInfo = ref<CommitInfo>({})
 const copyItemList = ref<CopyItem[]>([])
 /** 操作按钮列表 */
 const operationList = ref<FlowOperation[]>([])
+/** 是否正在提交（防止重复提交） */
+const isSubmitting = ref(false)
 
 /** 流程定义ID */
 const processDefinitionId = ref<string | undefined>()
@@ -242,6 +244,10 @@ function handlerOperation(operation: FlowOperation): void {
  * @param copyItemList - 抄送列表
  */
 async function handlerSubmit(operation: FlowOperation, copyItemList: CopyItem[]): Promise<void> {
+  if (workflowFormRef.value && !workflowFormRef.value.isReady) {
+    showMessage('表单数据加载中，请稍候！', 'warning')
+    return
+  }
   const formData = await getMasterData(operation.type)
   preHandlerOperation(operation, false, copyItemList, formData).then((taskCommitData) => {
     onTaskCommitCallback(true, taskCommitData)
@@ -256,6 +262,10 @@ async function handlerSubmit(operation: FlowOperation, copyItemList: CopyItem[])
  * @param copyItemList - 抄送列表
  */
 async function handlerStart(operation: FlowOperation, copyItemList: CopyItem[]): void {
+  if (workflowFormRef.value && !workflowFormRef.value.isReady) {
+    showMessage('表单数据加载中，请稍候！', 'warning')
+    return
+  }
   const formData = await getMasterData(operation.type)
   preHandlerOperation(operation, true, copyItemList, formData).then((taskCommitData) => {
     if (formData) {
@@ -338,6 +348,12 @@ function startImpl(
   formData: Record<string, any>,
   copyItemList: CopyItem[],
 ): void {
+  if (isSubmitting.value) {
+    showMessage('正在提交中，请稍候！', 'warning')
+    return
+  }
+  isSubmitting.value = true
+  showLoadingToast({ message: '提交中...', forbidClick: true, duration: 0 })
   FlowOperationController.startAndTakeUserTask({
     processDefinitionKey: taskDetailsData.value.processDefinitionKey,
     masterData: formData.masterData || {},
@@ -354,9 +370,13 @@ function startImpl(
       return retObj
     }, {} as Record<string, string>),
   }).then(() => {
+    closeToast()
+    isSubmitting.value = false
     showMessage('启动成功！', 'success')
     handlerClose()
   }).catch((e) => {
+    closeToast()
+    isSubmitting.value = false
     console.error(e)
   })
 }
@@ -376,6 +396,13 @@ function submitImpl(
   taskCommitData: Record<string, any>,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
+    if (isSubmitting.value) {
+      showMessage('正在提交中，请稍候！', 'warning')
+      reject(new Error('重复提交'))
+      return
+    }
+    isSubmitting.value = true
+    showLoadingToast({ message: '提交中...', forbidClick: true, duration: 0 })
     const params = {
       taskId: taskDetailsData.value.taskId,
       processInstanceId: taskDetailsData.value.processInstanceId,
@@ -399,9 +426,13 @@ function submitImpl(
     }
 
     FlowOperationController.submitUserTask(params).then(() => {
+      closeToast()
+      isSubmitting.value = false
       showMessage('提交成功！', 'success')
       resolve()
     }).catch((e) => {
+      closeToast()
+      isSubmitting.value = false
       reject(e)
     })
   })
@@ -498,6 +529,10 @@ async function onTaskCommitCallback(success: boolean, taskCommitData?: Record<st
   const copyItemListValue = copyItemList.value
 
   if (success) {
+    if (isSubmitting.value) {
+      showMessage('正在提交中，请稍候！', 'warning')
+      return
+    }
     // 启动流程
     if (taskDetailsData.value.processInstanceId == null && taskDetailsData.value.taskId == null) {
       startImpl(operation, formData, copyItemListValue)

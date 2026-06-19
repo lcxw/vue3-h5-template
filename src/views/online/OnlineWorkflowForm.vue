@@ -410,9 +410,10 @@ watch(() => props.formConfig, (newConfig) => {
   }
 }, { immediate: true })
 
-// 暴露方法供父组件调用
+// 暴露方法和状态供父组件调用
 defineExpose({
   getFormData,
+  isReady,
 })
 </script>
 

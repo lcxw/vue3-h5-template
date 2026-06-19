@@ -147,6 +147,8 @@ import type { FlowOperation } from '../types'
 
 /** 用户选择组件引用 */
 const userSelectRef = ref()
+/** 是否正在提交（防止重复点击确定按钮） */
+const isSubmitting = ref(false)
 
 /**
  * 组件属性定义
@@ -298,6 +300,10 @@ function goBack(): void {
  * 提交审批
  */
 function onSubmitClick(): void {
+  if (isSubmitting.value) {
+    return
+  }
+  isSubmitting.value = true
   if (Array.isArray(userName.value) && userName.value.length > 0) {
     const selectItems = userSelectRef.value ? userSelectRef.value.getSelectItems() : []
     formData.value.assignee = selectItems.map((item: any) => item.loginName).join(',')

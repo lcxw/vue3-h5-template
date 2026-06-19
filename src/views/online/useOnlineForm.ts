@@ -217,6 +217,9 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: UseOn
   const buildFormConfig = (formData: FormConfig | null): FormConfig => {
     if (formData == null)
       return {} as FormConfig
+    // 防御性保护：已构建过的配置直接返回，避免重复构建导致数据异常
+    if ((formData as any)._isConfigBuilt)
+      return formData as FormConfig
     const formConfig: FormConfig = { ...formData }
     formConfig.datasourceMap = new Map()
     formConfig.relationMap = new Map()
@@ -330,6 +333,8 @@ export function useOnlineForm(formConfig: Ref<FormConfig | null>, options: UseOn
       })
     }
 
+    // 标记已构建，避免重复构建
+    ;(formData as any)._isConfigBuilt = true
     return formConfig
   }
 
